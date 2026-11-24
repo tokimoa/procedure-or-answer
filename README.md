@@ -92,25 +92,16 @@ single block, or the whole file:
 sh run_experiments.sh
 ```
 
-- The full set takes many hours on one laptop. The paper's runs used 36 GB of
-  unified memory; the four main models need under 6 GB each.
-- Decoding is sampled at temperature 0.7 and seeded per seed and item. Exact
-  numbers can still differ across machines and across re-downloads of the
-  model weights.
-- `exp29` to `exp34` load one model at a time and checkpoint as they go, so an
-  interrupted run resumes with the same arguments.
+The full set takes many hours on one laptop (the paper's runs used 36 GB of
+unified memory; the four main models need under 6 GB each). Decoding is sampled
+and seeded, so exact numbers can differ across machines and model re-downloads.
 
 ## Result files
 
-- Each file holds per-model, per-seed, per-condition accuracies. Some also
-  hold the synthetic problems and the models' generations on them.
-- No benchmark items are redistributed. Files for BBH, PopQA, and GSM8K hold
-  accuracies only; `exp29_popqa_fixed.json` and `exp30_bbh_fixed.json` hold
-  per-item correctness and retrieval hits keyed by the benchmarks' own item
-  ids.
-- The `meta` fields of `exp32_screened_only.json` and
-  `exp33_working_mask.json` record run-time file names that carried a
-  `rebuttal_` prefix.
+Each file in `results/` holds per-model, per-seed, per-condition accuracies;
+some also hold the synthetic problems and the models' generations on them. No
+benchmark items are redistributed: files for BBH, PopQA, and GSM8K hold
+accuracies or per-item correctness keyed by the benchmarks' own item ids.
 
 ## License
 
