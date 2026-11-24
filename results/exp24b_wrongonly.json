@@ -1,0 +1,402 @@
+[
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 0,
+    "wrongonly": 0.6666666666666666,
+    "pool_wrong": 4,
+    "nomem": 0.9583333333333334,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 0.75
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 1,
+    "wrongonly": 1.0,
+    "pool_wrong": 3,
+    "nomem": 0.9583333333333334,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 0.9583333333333334
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 2,
+    "wrongonly": 0.25,
+    "pool_wrong": 3,
+    "nomem": 0.9166666666666666,
+    "worked_filtered": 0.9166666666666666,
+    "worked_unfiltered": 0.875
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 3,
+    "wrongonly": 0.5416666666666666,
+    "pool_wrong": 2,
+    "nomem": 0.9166666666666666,
+    "worked_filtered": 0.9166666666666666,
+    "worked_unfiltered": 1.0
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 4,
+    "wrongonly": 1.0,
+    "pool_wrong": 1,
+    "nomem": 0.9166666666666666,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 0.9583333333333334
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 0,
+    "wrongonly": 0.2916666666666667,
+    "pool_wrong": 17,
+    "nomem": 0.25,
+    "worked_filtered": 0.4166666666666667,
+    "worked_unfiltered": 0.25
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 1,
+    "wrongonly": 0.3333333333333333,
+    "pool_wrong": 15,
+    "nomem": 0.375,
+    "worked_filtered": 0.5,
+    "worked_unfiltered": 0.4166666666666667
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 2,
+    "wrongonly": 0.4166666666666667,
+    "pool_wrong": 12,
+    "nomem": 0.375,
+    "worked_filtered": 0.375,
+    "worked_unfiltered": 0.3333333333333333
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 3,
+    "wrongonly": 0.4166666666666667,
+    "pool_wrong": 15,
+    "nomem": 0.375,
+    "worked_filtered": 0.375,
+    "worked_unfiltered": 0.375
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 4,
+    "wrongonly": 0.4583333333333333,
+    "pool_wrong": 17,
+    "nomem": 0.4583333333333333,
+    "worked_filtered": 0.5,
+    "worked_unfiltered": 0.375
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 0,
+    "wrongonly": 0.2916666666666667,
+    "pool_wrong": 9,
+    "nomem": 1.0,
+    "worked_filtered": 0.9166666666666666,
+    "worked_unfiltered": 0.7083333333333334
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 1,
+    "wrongonly": 0.5833333333333334,
+    "pool_wrong": 4,
+    "nomem": 0.8333333333333334,
+    "worked_filtered": 0.7916666666666666,
+    "worked_unfiltered": 0.8333333333333334
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 2,
+    "wrongonly": 0.375,
+    "pool_wrong": 5,
+    "nomem": 0.875,
+    "worked_filtered": 1.0,
+    "worked_unfiltered": 0.875
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 3,
+    "wrongonly": 0.875,
+    "pool_wrong": 1,
+    "nomem": 0.5833333333333334,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 1.0
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 4,
+    "wrongonly": 0.5416666666666666,
+    "pool_wrong": 6,
+    "nomem": 0.875,
+    "worked_filtered": 0.8333333333333334,
+    "worked_unfiltered": 0.7916666666666666
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 0,
+    "wrongonly": 0.125,
+    "pool_wrong": 21,
+    "nomem": 0.16666666666666666,
+    "worked_filtered": 0.625,
+    "worked_unfiltered": 0.08333333333333333
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 1,
+    "wrongonly": 0.125,
+    "pool_wrong": 21,
+    "nomem": 0.16666666666666666,
+    "worked_filtered": 0.5,
+    "worked_unfiltered": 0.25
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 2,
+    "wrongonly": 0.125,
+    "pool_wrong": 15,
+    "nomem": 0.16666666666666666,
+    "worked_filtered": 0.5833333333333334,
+    "worked_unfiltered": 0.3333333333333333
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 3,
+    "wrongonly": 0.08333333333333333,
+    "pool_wrong": 20,
+    "nomem": 0.20833333333333334,
+    "worked_filtered": 0.5833333333333334,
+    "worked_unfiltered": 0.25
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 4,
+    "wrongonly": 0.08333333333333333,
+    "pool_wrong": 19,
+    "nomem": 0.375,
+    "worked_filtered": 0.625,
+    "worked_unfiltered": 0.16666666666666666
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 0,
+    "wrongonly": 0.4583333333333333,
+    "pool_wrong": 11,
+    "nomem": 0.5416666666666666,
+    "worked_filtered": 0.8333333333333334,
+    "worked_unfiltered": 0.5833333333333334
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 1,
+    "wrongonly": 0.6666666666666666,
+    "pool_wrong": 7,
+    "nomem": 0.75,
+    "worked_filtered": 0.5833333333333334,
+    "worked_unfiltered": 0.7916666666666666
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 2,
+    "wrongonly": 0.4583333333333333,
+    "pool_wrong": 8,
+    "nomem": 0.7083333333333334,
+    "worked_filtered": 0.8333333333333334,
+    "worked_unfiltered": 0.75
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 3,
+    "wrongonly": 0.20833333333333334,
+    "pool_wrong": 11,
+    "nomem": 0.5833333333333334,
+    "worked_filtered": 0.6666666666666666,
+    "worked_unfiltered": 0.5833333333333334
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 4,
+    "wrongonly": 0.4166666666666667,
+    "pool_wrong": 11,
+    "nomem": 0.5,
+    "worked_filtered": 0.75,
+    "worked_unfiltered": 0.4166666666666667
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 0,
+    "wrongonly": 0.08333333333333333,
+    "pool_wrong": 23,
+    "nomem": 0.20833333333333334,
+    "worked_filtered": 0.20833333333333334,
+    "worked_unfiltered": 0.08333333333333333
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 1,
+    "wrongonly": 0.041666666666666664,
+    "pool_wrong": 22,
+    "nomem": 0.08333333333333333,
+    "worked_filtered": 0.4583333333333333,
+    "worked_unfiltered": 0.20833333333333334
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 2,
+    "wrongonly": 0.0,
+    "pool_wrong": 20,
+    "nomem": 0.041666666666666664,
+    "worked_filtered": 0.3333333333333333,
+    "worked_unfiltered": 0.08333333333333333
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 3,
+    "wrongonly": 0.125,
+    "pool_wrong": 17,
+    "nomem": 0.125,
+    "worked_filtered": 0.375,
+    "worked_unfiltered": 0.3333333333333333
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 4,
+    "wrongonly": 0.25,
+    "pool_wrong": 21,
+    "nomem": 0.16666666666666666,
+    "worked_filtered": 0.4166666666666667,
+    "worked_unfiltered": 0.2916666666666667
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 0,
+    "wrongonly": 0.9583333333333334,
+    "pool_wrong": 2,
+    "nomem": 0.875,
+    "worked_filtered": 0.9166666666666666,
+    "worked_unfiltered": 0.9583333333333334
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 1,
+    "wrongonly": 0.375,
+    "pool_wrong": 2,
+    "nomem": 0.9583333333333334,
+    "worked_filtered": 0.8333333333333334,
+    "worked_unfiltered": 0.7916666666666666
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 2,
+    "wrongonly": 1.0,
+    "pool_wrong": 3,
+    "nomem": 1.0,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 0.9166666666666666
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 3,
+    "wrongonly": 0.75,
+    "pool_wrong": 1,
+    "nomem": 0.9583333333333334,
+    "worked_filtered": 0.9583333333333334,
+    "worked_unfiltered": 1.0
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 4,
+    "wrongonly": 0.2916666666666667,
+    "pool_wrong": 4,
+    "nomem": 0.875,
+    "worked_filtered": 0.875,
+    "worked_unfiltered": 0.8333333333333334
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 0,
+    "wrongonly": 0.2916666666666667,
+    "pool_wrong": 15,
+    "nomem": 0.4166666666666667,
+    "worked_filtered": 0.4583333333333333,
+    "worked_unfiltered": 0.375
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 1,
+    "wrongonly": 0.625,
+    "pool_wrong": 14,
+    "nomem": 0.5833333333333334,
+    "worked_filtered": 0.5833333333333334,
+    "worked_unfiltered": 0.5416666666666666
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 2,
+    "wrongonly": 0.375,
+    "pool_wrong": 9,
+    "nomem": 0.4583333333333333,
+    "worked_filtered": 0.5,
+    "worked_unfiltered": 0.5416666666666666
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 3,
+    "wrongonly": 0.5416666666666666,
+    "pool_wrong": 13,
+    "nomem": 0.5,
+    "worked_filtered": 0.625,
+    "worked_unfiltered": 0.4166666666666667
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 4,
+    "wrongonly": 0.5416666666666666,
+    "pool_wrong": 11,
+    "nomem": 0.5833333333333334,
+    "worked_filtered": 0.625,
+    "worked_unfiltered": 0.625
+  }
+]

@@ -1,0 +1,110 @@
+{
+  "rows": [
+    {
+      "model": "phi4-mini",
+      "task": "invoice",
+      "seed": 0,
+      "cond": "worked_clean",
+      "parse_fail": 0.041666666666666664,
+      "mean_tokens": 230.83333333333334,
+      "hit_cap": 0.16666666666666666
+    },
+    {
+      "model": "phi4-mini",
+      "task": "invoice",
+      "seed": 0,
+      "cond": "proc_only",
+      "parse_fail": 1.0,
+      "mean_tokens": 205.20833333333334,
+      "hit_cap": 0.08333333333333333
+    },
+    {
+      "model": "phi4-mini",
+      "task": "invoice",
+      "seed": 1,
+      "cond": "worked_clean",
+      "parse_fail": 0.0,
+      "mean_tokens": 208.58333333333334,
+      "hit_cap": 0.041666666666666664
+    },
+    {
+      "model": "phi4-mini",
+      "task": "invoice",
+      "seed": 1,
+      "cond": "proc_only",
+      "parse_fail": 0.6666666666666666,
+      "mean_tokens": 228.16666666666666,
+      "hit_cap": 0.16666666666666666
+    },
+    {
+      "model": "phi4-mini",
+      "task": "arith_hard",
+      "seed": 0,
+      "cond": "worked_clean",
+      "parse_fail": 0.0,
+      "mean_tokens": 226.125,
+      "hit_cap": 0.0
+    },
+    {
+      "model": "phi4-mini",
+      "task": "arith_hard",
+      "seed": 0,
+      "cond": "proc_only",
+      "parse_fail": 0.08333333333333333,
+      "mean_tokens": 234.41666666666666,
+      "hit_cap": 0.041666666666666664
+    },
+    {
+      "model": "phi4-mini",
+      "task": "arith_hard",
+      "seed": 1,
+      "cond": "worked_clean",
+      "parse_fail": 0.25,
+      "mean_tokens": 259.0833333333333,
+      "hit_cap": 0.125
+    },
+    {
+      "model": "phi4-mini",
+      "task": "arith_hard",
+      "seed": 1,
+      "cond": "proc_only",
+      "parse_fail": 0.3333333333333333,
+      "mean_tokens": 249.16666666666666,
+      "hit_cap": 0.041666666666666664
+    }
+  ],
+  "samples": {
+    "invoice|s0|worked_clean": {
+      "failed_example": "his one. Still I think we can agree that I was close to 100% confident in this case as I think I provided an accurate answer in this case but I was not absolutely certain prior to it. Still I think I can agree that I was close to being 100% confident in this case as I think I provided an accurate answer in this case but I was not absolutely certain prior to it. Still I think I can agree that I was",
+      "ok_example": "I was close to being 95% confident I think I was close to being 95% confident I think I was close to being 95% confident I think I was close to being 95% confident I think I was close to being 95% confident I think I was close to being 95% confident I think I was close to being 95% confident I think"
+    },
+    "invoice|s0|proc_only": {
+      "failed_example": "em:\n1. First, find the subtotal of the items before tax.\n   - (6 units x JPY 853) + (5 units x JPY 576) = JPY 5078 + JPY 2880 = JPY 7958\n\n2. Then, calculate the consumption tax (10% of JPY 7958).\n   - JPY 7958 * 0.10 = JPY 795.80\n\n3. Add the consumption tax to the subtotal.\n   - JPY 7958 + JPY 795.80 = JPY 8753.80\n\nThe final payable total (rounded to an integer):\n\nANSWER: JPY 8754\n\nCONFIDENCE: 95%",
+      "ok_example": "76) = JPY 5078 + JPY 2880 = JPY 7958\n\n2. Then, calculate the consumption tax (10% of JPY 7958).\n   - JPY 7958 * 0.10 = JPY 795.80\n\n3. Add the consumption tax to the subtotal.\n   - JPY 7958 + JPY 795.80 = JPY 8753.80\n\nThe final payable total (rounded to an integer):\n\nANSWER: JPY 8754\n\nCONFIDENCE: 95%"
+    },
+    "invoice|s1|worked_clean": {
+      "failed_example": null,
+      "ok_example": "before tax = JPY 3378 + JPY 752 = JPY 4130\n\n2. Add 10% consumption tax:\n- Consumption tax = 10% of JPY 4130 = JPY 413\n\n3. Add tax to the subtotal:\n- Total payable = JPY 4130 + JPY 413 = JPY 4543\n\nANSWER: 4543\nCONFIDENCE: 100\n\nThe final answers are formatted as requested:\nANSWER: 4543\nCONFIDENCE: 100"
+    },
+    "invoice|s1|proc_only": {
+      "failed_example": "inal final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final",
+      "ok_example": " final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final final"
+    },
+    "arith_hard|s0|worked_clean": {
+      "failed_example": null,
+      "ok_example": "ged items:\n   - Damaged items = \\( 240 \\times 0.10 = 24 \\).\n3. Find good items:\n   - Good items left = total items - damaged items = \\( 240 - 24 = 216 \\).\n4. Find number of crates:\n   - Number of crates needed = good items / number of items per crate = \\( 216 / 7 = 30 \\).\n\nANSWER: 30\nCONFIDENCE: 95%"
+    },
+    "arith_hard|s0|proc_only": {
+      "failed_example": "} = 64 \\text{ boxes} \\).\n\n   - Each box contains 6 items:\n   \\( 64 \\text{ boxes} \\times 6 \\text{ items/box} = 384 \\).\n\n2. Find damaged items:\n   - Damaged items = \\( 5\\% \\times 384 = 19.2 \\).\n\n   Approximating down:\n   - Damaged items = 19 items.\n\n3. Find remaining items:\n   - Remaining items = \\( 384 - 19 = 365 \\).\n\n4. Pack items into crates:\n   - Divide remaining items by crate size:\n   \\( 365 \\",
+      "ok_example": "ged items:\n   - Damaged items = \\( 240 \\times 0.10 = 24 \\).\n3. Find good items:\n   - Good items left = total items - damaged items = \\( 240 - 24 = 216 \\).\n4. Find number of crates:\n   - Number of crates needed = good items / number of items per crate = \\( 216 / 7 = 30 \\).\n\nANSWER: 30\nCONFIDENCE: 95%"
+    },
+    "arith_hard|s1|worked_clean": {
+      "failed_example": "aged items:\n   - Damaged items = 5% of 240 items = 0.05 * 240 = 12 items\n\n3. Subtract damaged items from the total items:\n   - Remaining items = 240 items - 12 items = 228 items\n\n4. Find the number of full crates:\n   - Each crate holds 9 items:\n   \\[\n   228 \\div 9 = 25 \\text{ full crates} \\text{ (with a leftover of 3 items (228 % 9 = 3)}}\n   \\]\n\nThe final answer:\n\\[\n\\boxed{25}\n\\]\n\nCONFIDENCE: 100%",
+      "ok_example": " as requested in the problem statement. I cannot attach an exact confidence level to these final lines as I am unable to attach confidence levels to final lines I generate manually in a conversation. I derive final answers following a clear problem-solving process while avoiding final lines I derive"
+    },
+    "arith_hard|s1|proc_only": {
+      "failed_example": "ms are damaged:\n   \\[\n   0.05 \\times 240 = 12 \\text{ items}\n   \\]\n\n3. Find the remaining items:\n   Subtract the damaged items from the total items:\n   \\[\n   240 - 12 = 228 \\text{ items remaining}\n   \\]\n\n4. Find the number of full crates:\n   Each crate holds 9 items:\n   \\[\n   \\left\\lfloor \\frac{228}{9} \\right\\rfloor = 25 \\text{ full crates}\n   \\]\n\nThe final answer:\n\\[\n\\boxed{25}\n\\]\n\nCONFIDENCE: 95%",
+      "ok_example": " remaining items:\n- Subtract the damaged items from the total items: 144 - 7 = 137 items remaining\n\nTo find the number of full crates:\n- Divide the remaining items by the crate capacity (11 items per crate): 137 / 11 = 12 crates (with a remainder).\n\nThe final answers are:\nANSWER: 12\nCONFIDENCE: 100%"
+    }
+  }
+}

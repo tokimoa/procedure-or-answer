@@ -1,0 +1,62 @@
+[
+  {
+    "model": "llama3.2-3b",
+    "seed": 0,
+    "nomem_memstyle_prompt": 0.4,
+    "nomem_clean_prompt": 0.44
+  },
+  {
+    "model": "llama3.2-3b",
+    "seed": 1,
+    "nomem_memstyle_prompt": 0.52,
+    "nomem_clean_prompt": 0.64
+  },
+  {
+    "model": "llama3.2-3b",
+    "seed": 2,
+    "nomem_memstyle_prompt": 0.6,
+    "nomem_clean_prompt": 0.36
+  },
+  {
+    "model": "llama3.2-3b",
+    "seed": 3,
+    "nomem_memstyle_prompt": 0.4,
+    "nomem_clean_prompt": 0.48
+  },
+  {
+    "model": "llama3.2-3b",
+    "seed": 4,
+    "nomem_memstyle_prompt": 0.48,
+    "nomem_clean_prompt": 0.52
+  },
+  {
+    "model": "ministral3-3b",
+    "seed": 0,
+    "nomem_memstyle_prompt": 0.16,
+    "nomem_clean_prompt": 0.08
+  },
+  {
+    "model": "ministral3-3b",
+    "seed": 1,
+    "nomem_memstyle_prompt": 0.04,
+    "nomem_clean_prompt": 0.16
+  },
+  {
+    "model": "ministral3-3b",
+    "seed": 2,
+    "nomem_memstyle_prompt": 0.0,
+    "nomem_clean_prompt": 0.08
+  },
+  {
+    "model": "ministral3-3b",
+    "seed": 3,
+    "nomem_memstyle_prompt": 0.12,
+    "nomem_clean_prompt": 0.16
+  },
+  {
+    "model": "ministral3-3b",
+    "seed": 4,
+    "nomem_memstyle_prompt": 0.24,
+    "nomem_clean_prompt": 0.16
+  }
+]

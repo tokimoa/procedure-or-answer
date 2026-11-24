@@ -1,0 +1,402 @@
+[
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 0,
+    "nomem": 0.8333333333333334,
+    "answer_only": 0.875,
+    "worked_clean": 0.9583333333333334,
+    "worked_ans_bad": 1.0,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 1,
+    "nomem": 0.8333333333333334,
+    "answer_only": 0.75,
+    "worked_clean": 1.0,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 2,
+    "nomem": 0.875,
+    "answer_only": 0.9166666666666666,
+    "worked_clean": 0.9583333333333334,
+    "worked_ans_bad": 0.9583333333333334,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 3,
+    "nomem": 0.9166666666666666,
+    "answer_only": 0.9166666666666666,
+    "worked_clean": 0.9583333333333334,
+    "worked_ans_bad": 1.0,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "arith_hard",
+    "seed": 4,
+    "nomem": 0.9166666666666666,
+    "answer_only": 0.8333333333333334,
+    "worked_clean": 0.9583333333333334,
+    "worked_ans_bad": 1.0,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 0,
+    "nomem": 0.3333333333333333,
+    "answer_only": 0.375,
+    "worked_clean": 0.5,
+    "worked_ans_bad": 0.375,
+    "pool": 24
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 1,
+    "nomem": 0.4166666666666667,
+    "answer_only": 0.375,
+    "worked_clean": 0.4583333333333333,
+    "worked_ans_bad": 0.375,
+    "pool": 23
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 2,
+    "nomem": 0.20833333333333334,
+    "answer_only": 0.4166666666666667,
+    "worked_clean": 0.4166666666666667,
+    "worked_ans_bad": 0.3333333333333333,
+    "pool": 22
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 3,
+    "nomem": 0.4166666666666667,
+    "answer_only": 0.4166666666666667,
+    "worked_clean": 0.4583333333333333,
+    "worked_ans_bad": 0.4583333333333333,
+    "pool": 22
+  },
+  {
+    "model": "llama3.2-3b",
+    "task": "invoice",
+    "seed": 4,
+    "nomem": 0.4166666666666667,
+    "answer_only": 0.4166666666666667,
+    "worked_clean": 0.375,
+    "worked_ans_bad": 0.5,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 0,
+    "nomem": 1.0,
+    "answer_only": 0.8333333333333334,
+    "worked_clean": 1.0,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 1,
+    "nomem": 0.8333333333333334,
+    "answer_only": 0.875,
+    "worked_clean": 0.7916666666666666,
+    "worked_ans_bad": 0.7916666666666666,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 2,
+    "nomem": 0.875,
+    "answer_only": 0.875,
+    "worked_clean": 0.9166666666666666,
+    "worked_ans_bad": 0.9583333333333334,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 3,
+    "nomem": 0.5833333333333334,
+    "answer_only": 0.875,
+    "worked_clean": 1.0,
+    "worked_ans_bad": 0.875,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "arith_hard",
+    "seed": 4,
+    "nomem": 0.875,
+    "answer_only": 0.75,
+    "worked_clean": 0.9166666666666666,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 0,
+    "nomem": 0.16666666666666666,
+    "answer_only": 0.041666666666666664,
+    "worked_clean": 0.5416666666666666,
+    "worked_ans_bad": 0.5,
+    "pool": 17
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 1,
+    "nomem": 0.16666666666666666,
+    "answer_only": 0.20833333333333334,
+    "worked_clean": 0.375,
+    "worked_ans_bad": 0.4583333333333333,
+    "pool": 16
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 2,
+    "nomem": 0.16666666666666666,
+    "answer_only": 0.20833333333333334,
+    "worked_clean": 0.4583333333333333,
+    "worked_ans_bad": 0.5416666666666666,
+    "pool": 18
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 3,
+    "nomem": 0.20833333333333334,
+    "answer_only": 0.125,
+    "worked_clean": 0.5416666666666666,
+    "worked_ans_bad": 0.4583333333333333,
+    "pool": 12
+  },
+  {
+    "model": "phi4-mini",
+    "task": "invoice",
+    "seed": 4,
+    "nomem": 0.375,
+    "answer_only": 0.16666666666666666,
+    "worked_clean": 0.5416666666666666,
+    "worked_ans_bad": 0.6666666666666666,
+    "pool": 17
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 0,
+    "nomem": 0.5416666666666666,
+    "answer_only": 0.3333333333333333,
+    "worked_clean": 0.5833333333333334,
+    "worked_ans_bad": 0.625,
+    "pool": 24
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 1,
+    "nomem": 0.75,
+    "answer_only": 0.2916666666666667,
+    "worked_clean": 0.7916666666666666,
+    "worked_ans_bad": 0.75,
+    "pool": 24
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 2,
+    "nomem": 0.7083333333333334,
+    "answer_only": 0.4166666666666667,
+    "worked_clean": 0.8333333333333334,
+    "worked_ans_bad": 0.7916666666666666,
+    "pool": 24
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 3,
+    "nomem": 0.5833333333333334,
+    "answer_only": 0.3333333333333333,
+    "worked_clean": 0.7083333333333334,
+    "worked_ans_bad": 0.75,
+    "pool": 24
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "arith_hard",
+    "seed": 4,
+    "nomem": 0.5,
+    "answer_only": 0.5416666666666666,
+    "worked_clean": 0.7083333333333334,
+    "worked_ans_bad": 0.6666666666666666,
+    "pool": 24
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 0,
+    "nomem": 0.20833333333333334,
+    "answer_only": 0.041666666666666664,
+    "worked_clean": 0.3333333333333333,
+    "worked_ans_bad": 0.20833333333333334,
+    "pool": 8
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 1,
+    "nomem": 0.08333333333333333,
+    "answer_only": 0.0,
+    "worked_clean": 0.625,
+    "worked_ans_bad": 0.4166666666666667,
+    "pool": 10
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 2,
+    "nomem": 0.041666666666666664,
+    "answer_only": 0.08333333333333333,
+    "worked_clean": 0.4166666666666667,
+    "worked_ans_bad": 0.16666666666666666,
+    "pool": 7
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 3,
+    "nomem": 0.125,
+    "answer_only": 0.0,
+    "worked_clean": 0.4166666666666667,
+    "worked_ans_bad": 0.3333333333333333,
+    "pool": 19
+  },
+  {
+    "model": "ministral3-3b",
+    "task": "invoice",
+    "seed": 4,
+    "nomem": 0.16666666666666666,
+    "answer_only": 0.08333333333333333,
+    "worked_clean": 0.3333333333333333,
+    "worked_ans_bad": 0.3333333333333333,
+    "pool": 14
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 0,
+    "nomem": 0.875,
+    "answer_only": 0.9166666666666666,
+    "worked_clean": 1.0,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 1,
+    "nomem": 0.9583333333333334,
+    "answer_only": 0.875,
+    "worked_clean": 0.875,
+    "worked_ans_bad": 0.875,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 2,
+    "nomem": 1.0,
+    "answer_only": 0.9166666666666666,
+    "worked_clean": 0.875,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 3,
+    "nomem": 0.9583333333333334,
+    "answer_only": 0.9166666666666666,
+    "worked_clean": 1.0,
+    "worked_ans_bad": 0.9583333333333334,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "arith_hard",
+    "seed": 4,
+    "nomem": 0.875,
+    "answer_only": 0.875,
+    "worked_clean": 0.875,
+    "worked_ans_bad": 0.9166666666666666,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 0,
+    "nomem": 0.4166666666666667,
+    "answer_only": 0.5,
+    "worked_clean": 0.4583333333333333,
+    "worked_ans_bad": 0.4583333333333333,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 1,
+    "nomem": 0.5833333333333334,
+    "answer_only": 0.625,
+    "worked_clean": 0.5833333333333334,
+    "worked_ans_bad": 0.5416666666666666,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 2,
+    "nomem": 0.4583333333333333,
+    "answer_only": 0.5416666666666666,
+    "worked_clean": 0.5833333333333334,
+    "worked_ans_bad": 0.375,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 3,
+    "nomem": 0.5,
+    "answer_only": 0.5833333333333334,
+    "worked_clean": 0.5,
+    "worked_ans_bad": 0.5416666666666666,
+    "pool": 24
+  },
+  {
+    "model": "granite4.1-8b",
+    "task": "invoice",
+    "seed": 4,
+    "nomem": 0.5833333333333334,
+    "answer_only": 0.625,
+    "worked_clean": 0.625,
+    "worked_ans_bad": 0.625,
+    "pool": 24
+  }
+]
