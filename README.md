@@ -1,140 +1,121 @@
-# Procedure or Answer? What Part of Memory Helps On-Device Self-Improvement Depends on the Task
+# procedure-or-answer
 
-Code and per-run result files for the paper
+Experiments that test which part of a retrieved memory an on-device language
+model uses: the demonstrated procedure, or the stored answer. A model solves a
+task with few-shot exemplars drawn from a local store, and the store is edited
+one part at a time (answer field, procedure, fact record) to measure what
+changes.
 
-> Takuya Omi. *Procedure or Answer? What Part of Memory Helps On-Device
-> Self-Improvement Depends on the Task.* Findings of EACL 2027.
+Everything runs locally on Apple silicon with 4-bit MLX models.
 
-A language model can improve without weight updates by storing its own solved
-problems and retrieving them as few-shot context. The paper asks which part of
-a stored exemplar carries the gain. On procedural (recomputable) tasks it is
-the demonstrated procedure: corrupting the stored answer costs almost nothing,
-because the model recomputes it. On knowledge-lookup tasks it is the stored
-fact: corrupting it removes all of memory's value.
+Paper: Takuya Omi, *Procedure or Answer? What Part of Memory Helps On-Device
+Self-Improvement Depends on the Task*, Findings of EACL 2027.
 
-This repository contains every experiment script, the shared inference
-backend, and the result files behind every table, figure, and statistic in the
-paper. All experiments run on one Apple-silicon laptop with 4-bit MLX models.
+## Installation
 
-## Contents
-
-```
-experiments/   one script per experiment, plus the analysis and figure scripts
-rsiguard/      on-device inference backend (mlx-lm): seeded decoding, embeddings
-results/       per-run result files (JSON), one per experiment run
-```
-
-Shared modules in `experiments/`:
-
-- `models.py`: registry of the ten models used (four families, 1B to 30B)
-- `memory.py`: few-shot prompt construction and solving with retrieved exemplars
-- `pools.py`: synthetic procedural tasks, exemplar-pool construction, answer-field corruption
-
-## Recomputing the paper's numbers
-
-No model is needed for this step; it reads `results/` only.
+Python 3.12 on Apple silicon.
 
 ```bash
+git clone https://github.com/tokimoa/procedure-or-answer.git
+cd procedure-or-answer
 pip install -r requirements.txt
-
-python experiments/analyze_paper_stats.py      # statistics of Sections 4 and 5, Appendices B to I
-python experiments/make_paper_figures.py       # all six figures, written to figures/
-python experiments/analyze_rebuttal_addons.py results/exp29_popqa_fixed.json results/exp30_bbh_fixed.json
-python experiments/analyze_screened_sensitivity.py results/exp32_screened_only.json
-python experiments/analyze_two_fact.py results/exp34_two_fact.json
 ```
 
-Run every command from the repository root.
+Models are downloaded from the Hugging Face `mlx-community` organization on
+first use. BBH, PopQA, and GSM8K are loaded with `datasets`.
 
-## Result-to-file map
+## Quickstart
 
-This is Table 18 (Appendix M) of the paper.
-
-| Result | Script (`experiments/`) | Result file (`results/`) |
-|---|---|---|
-| Table 1; Section 4.1 | `exp13_ingredient.py` | `exp13_ci_v2.json` |
-| Table 6 (ten-model roster) | `exp13_ingredient.py` | `exp13_roster_v2.json` |
-| Table 2; Figure 5 | `exp18_procedure.py` | `exp18_ci_v2.json` |
-| Table 7 (own-style replication) | `exp26_ownstyle_method.py` | `exp26_ownstyle.json`, `exp26_decoupled.json` |
-| Figure 1 (copy-rate, k=3) | `exp25_copyrate_k3.py` | `exp25_copyrate_k3.json` |
-| Table 10 (copy-rate, k=1) | `exp23_copyrate.py` | `exp23_copyrate_v2.json` |
-| Table 8 (unfiltered pools) | `exp24_unfiltered.py` | `exp24_unfiltered.json` |
-| Section 4.4 (wrong-only control) | `exp24b_wrongonly.py` | `exp24b_wrongonly.json` |
-| Table 3; Figure 4 | `exp15_knowledge.py` | `exp15_ci_v2.json` |
-| Figure 3 (pollution sweep) | `exp16_knowledge_rho.py` | `exp16_ci_v2.json` |
-| Figure 6 (compositional test) | `exp21_mixed.py` | `exp21_mixed.json` |
-| Table 4, BBH rows; Figure 2 | `exp22_gsm8k.py` | `exp22_bbh_ci.json` |
-| Table 4, PopQA rows; Figure 2 | `exp19_popqa.py` | `exp19_ci.json` |
-| Table 13 (object counting) | `exp22_gsm8k.py` | `exp22_objcount_ci.json` |
-| Tables 11, 12 (state tracking, Boolean) | `exp27_bbh_nonnumeric.py` | `exp27_tracking3.json`, `exp27_boolean.json` |
-| Table 14 (GSM8K) | `exp22_gsm8k.py` | `exp22_gsm8k.json` |
-| Table 9 (answer removal) | `exp28_procedure_only.py` | `exp28_proc_only.json`, `exp28_bbh_proc_only.json` |
-| Appendix E (format probe) | `probe_proconly_format.py` | `exp28_format_probe.json`, `exp28_format_probe_texts.json` |
-| Appendix A (zero-shot prompt control) | `probe_nomem_prompt.py` | `probe_nomem_prompt.json` |
-| k-sensitivity (Section 3) | `exp17_ksens.py` | `exp17_ksens.json` |
-| Table 5, BBH; Appendix J | `exp30_bbh_fixed_loo.py` | `exp30_bbh_fixed.json` |
-| Tables 5 and 15, PopQA | `exp29_popqa_nonoracle_fixed.py` | `exp29_popqa_fixed.json` |
-| Table 16, audit | `exp31_filtered_pool_audit.py`, `audit_filtered_pool.py`, `finalize_filtered_pool_audit.py` | `exp31_filtered_audit_diagnostics_v3.json`, `exp31_filtered_audit_final.json` |
-| Table 16, screened | `exp32_screened_pool_sensitivity.py` | `exp32_screened_only.json` |
-| Table 16, masked | `exp33_working_value_mask.py` | `exp33_working_mask.json` |
-| Table 17 (multi-fact queries) | `exp34_two_fact.py` | `exp34_two_fact.json` |
-
-## Re-running the experiments
-
-Requirements: Apple silicon (the paper used 36 GB of unified memory; the four
-main models need under 6 GB each, and the ten-model roster goes up to 30B
-parameters), Python 3.12, and the pinned versions in `requirements.txt`. Models are
-downloaded from the Hugging Face `mlx-community` organization on first use;
-BBH, PopQA, and GSM8K are loaded with `datasets`.
+The repository ships the result files of every run, so the statistics and
+figures can be recomputed without loading a model:
 
 ```bash
-python experiments/exp15_knowledge.py \
-    --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b \
-    --n 24 --k 3 --seeds 5 --out results/my_exp15.json
+python experiments/analyze_paper_stats.py     # paired differences, CIs, equivalence tests
+python experiments/make_paper_figures.py      # writes six figures to figures/
 ```
 
-The settings used in the paper are in its Appendix A: 5 seeds (3 for GSM8K),
-24 test items per condition per seed (25 for BBH), k=3 retrieved exemplars,
-temperature 0.7 with per-seed reseeding. The usage lines in the script
-docstrings are examples and often use fewer seeds. The later scripts (`exp29`
-to `exp34`) load one model at a time and checkpoint as they go, so an
-interrupted run resumes with the same arguments.
+Run one experiment on one model (about 2 GB of memory, a few minutes):
 
-Sampled decoding is seeded, but exact numbers can differ across machines and
-across re-downloads of the model weights. The paired contrasts are stable.
+```bash
+python experiments/exp15_knowledge.py --models llama3.2-3b --n 24 --k 3 --seeds 1 \
+    --out results/my_run.json
+```
 
-The audit pipeline runs in three steps: `exp31_filtered_pool_audit.py`
-regenerates and archives the answer-correct exemplars,
-`audit_filtered_pool.py` adds the rule-based diagnostics, and
-`finalize_filtered_pool_audit.py` applies the two rules and writes the final
-file. `prepare_filtered_audit_sheet.py` builds the sheet used to check the
-flagged equations by hand.
+Run commands from the repository root.
 
-## About the result files
+## Repository layout
+
+```
+experiments/          one script per experiment, plus analysis and figure scripts
+  models.py           registry of the ten models (four families, 1B to 30B)
+  memory.py           few-shot prompt construction and solving with exemplars
+  pools.py            synthetic tasks, exemplar pools, answer-field corruption
+rsiguard/backends.py  MLX inference wrapper: seeded decoding, token embeddings
+results/              result files (JSON), one per run
+run_experiments.sh    the command behind each result file
+```
+
+## Experiments
+
+| Script | What it measures | Result file |
+|---|---|---|
+| `exp13_ingredient.py` | Procedural tasks: worked solution, bare answer, corrupted answer | `exp13_ci_v2.json`, `exp13_roster_v2.json` |
+| `exp18_procedure.py` | Corrupting the method versus the answer | `exp18_ci_v2.json` |
+| `exp26_ownstyle_method.py` | Method corruption with the model's own-style exemplars | `exp26_ownstyle.json`, `exp26_decoupled.json` |
+| `exp23_copyrate.py`, `exp25_copyrate_k3.py` | Copy-rate of a planted wrong answer or fact | `exp23_copyrate_v2.json`, `exp25_copyrate_k3.json` |
+| `exp24_unfiltered.py`, `exp24b_wrongonly.py` | Unfiltered self-generated pools; wrong-only pools | `exp24_unfiltered.json`, `exp24b_wrongonly.json` |
+| `exp28_procedure_only.py`, `probe_proconly_format.py` | Removing the stored answer; output-format probe | `exp28_proc_only.json`, `exp28_bbh_proc_only.json`, `exp28_format_probe*.json` |
+| `exp15_knowledge.py`, `exp16_knowledge_rho.py` | Knowledge lookup; fraction of corrupted facts | `exp15_ci_v2.json`, `exp16_ci_v2.json` |
+| `exp21_mixed.py` | Task needing both a stored fact and a procedure | `exp21_mixed.json` |
+| `exp17_ksens.py` | Sensitivity to the number of retrieved exemplars | `exp17_ksens.json` |
+| `exp34_two_fact.py` | Queries that combine two stored facts | `exp34_two_fact.json` |
+| `exp22_gsm8k.py` | BBH multistep arithmetic, BBH object counting, GSM8K | `exp22_bbh_ci.json`, `exp22_objcount_ci.json`, `exp22_gsm8k.json` |
+| `exp27_bbh_nonnumeric.py` | BBH state tracking and Boolean expressions | `exp27_tracking3.json`, `exp27_boolean.json` |
+| `exp19_popqa.py`, `probe_nomem_prompt.py` | PopQA long-tail questions; zero-shot prompt control | `exp19_ci.json`, `probe_nomem_prompt.json` |
+| `exp30_bbh_fixed_loo.py` | All 250 BBH items with leave-one-out retrieval | `exp30_bbh_fixed.json` |
+| `exp29_popqa_nonoracle_fixed.py` | 175 PopQA questions with same-entity distractors | `exp29_popqa_fixed.json` |
+| `exp31_filtered_pool_audit.py`, `audit_filtered_pool.py`, `finalize_filtered_pool_audit.py` | Rule-based audit of answer-correct exemplars | `exp31_filtered_audit_*.json` |
+| `exp32_screened_pool_sensitivity.py` | Accuracy with flagged exemplars removed | `exp32_screened_only.json` |
+| `exp33_working_value_mask.py` | Masking the derived value inside the working | `exp33_working_mask.json` |
+
+Analysis scripts: `analyze_paper_stats.py` (main statistics),
+`analyze_rebuttal_addons.py` (exp29, exp30), `analyze_screened_sensitivity.py`
+(exp32), `analyze_two_fact.py` (exp34). The last three take result-file paths
+as arguments.
+
+## Reproducing the runs
+
+`run_experiments.sh` lists the command that produced each result file. Run a
+single block, or the whole file:
+
+```bash
+sh run_experiments.sh
+```
+
+- The full set takes many hours on one laptop. The paper's runs used 36 GB of
+  unified memory; the four main models need under 6 GB each.
+- Decoding is sampled at temperature 0.7 and seeded per seed and item. Exact
+  numbers can still differ across machines and across re-downloads of the
+  model weights.
+- `exp29` to `exp34` load one model at a time and checkpoint as they go, so an
+  interrupted run resumes with the same arguments.
+
+## Result files
 
 - Each file holds per-model, per-seed, per-condition accuracies. Some also
-  hold our own synthetic problems and the models' generations on them (the
-  unfiltered pools, the audit population, the copy-rate transcripts).
+  hold the synthetic problems and the models' generations on them.
 - No benchmark items are redistributed. Files for BBH, PopQA, and GSM8K hold
-  accuracies only. The two fixed-set files hold per-item correctness and
-  retrieval hits keyed by the benchmarks' own item ids, without question
-  text, gold answers, or model outputs.
-- No personal data is included.
-- The `meta` fields of `exp32_screened_only.json` and `exp33_working_mask.json`
-  record the file names used at run time, which carried a `rebuttal_` prefix.
-  The files are otherwise unchanged.
+  accuracies only; `exp29_popqa_fixed.json` and `exp30_bbh_fixed.json` hold
+  per-item correctness and retrieval hits keyed by the benchmarks' own item
+  ids.
+- The `meta` fields of `exp32_screened_only.json` and
+  `exp33_working_mask.json` record run-time file names that carried a
+  `rebuttal_` prefix.
 
 ## License
 
 Code: MIT (`LICENSE`). Result files: CC BY 4.0 (`results/LICENSE`).
 BBH, PopQA, GSM8K, and the models keep their own licenses.
-
-## Use of AI assistants
-
-AI tools assisted with coding: the implementation follows the author's
-designs, with assistants used for review and suggestions rather than wholesale
-generation. All experimental designs, analyses, and numbers were verified by
-the author against the recorded run logs.
 
 ## Citation
 
