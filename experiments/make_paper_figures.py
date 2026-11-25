@@ -65,7 +65,7 @@ def grouped_drops(ax, drops_a, drops_b, label_a, label_b, ylabel):
     ax.set_xticks(x)
     ax.set_xticklabels([NAME[m] for m in MODELS4], fontsize=9)
     ax.set_ylabel(ylabel)
-    ax.legend(frameon=False)
+    ax.legend(frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2)
 
 
 def fig_dichotomy():
@@ -149,7 +149,8 @@ def fig_mixed():
     ax.set_xticks(x)
     ax.set_xticklabels([NAME[m] for m in MODELS4], fontsize=9)
     ax.set_ylabel("accuracy")
-    ax.legend(frameon=False, fontsize=8, ncol=2)
+    ax.legend(frameon=False, fontsize=8, ncol=4, loc="lower center",
+              bbox_to_anchor=(0.5, 1.0), columnspacing=1.0, handlelength=1.5)
     fig.savefig(f"{OUT}/fig_mixed.png")
     plt.close(fig)
 
