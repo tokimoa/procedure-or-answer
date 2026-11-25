@@ -94,7 +94,9 @@ sh run_experiments.sh
 
 The full set takes many hours on one laptop (the paper's runs used 36 GB of
 unified memory; the four main models need under 6 GB each). Decoding is sampled
-and seeded, so exact numbers can differ across machines and model re-downloads.
+and reseeded per data seed, so exact numbers can differ across machines and
+model re-downloads. `exp17_ksens.py`, `exp19_popqa.py` and `exp21_mixed.py`
+reseed data sampling only, so their numbers also vary from run to run.
 
 ## Result files
 
