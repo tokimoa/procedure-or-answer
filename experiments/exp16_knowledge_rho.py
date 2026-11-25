@@ -1,14 +1,10 @@
-"""exp16 — soundness: accuracy vs memory pollution rho on a KNOWLEDGE task.
+"""Accuracy on the synthetic fact-lookup task as a function of the corrupted fraction rho.
 
-Pairs with the procedural side, where accuracy is flat in rho. Prediction: knowledge accuracy FALLS
-sharply with rho (a cliff) — because the fact is the content and cannot be
-recomputed. Together they show the actionable claim: *verifying memory pays off
-only where rho matters (knowledge), and is useless where it doesn't (procedural).*
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp16_knowledge_rho.py \
-      --models phi4-mini,ministral3-3b,granite4.1-8b --n 24 --k 3 --seeds 3
+For each rho, that fraction of fact records is rebuilt with a wrong value; retrieval is
+top-k by embedding similarity. Each record holds the no-memory accuracy and a map from
+rho to accuracy.
 """
+
 import argparse
 import json
 import os
@@ -18,23 +14,26 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
-from experiments.models import MODELS
-from experiments.memory import solve as mem_solve
 from experiments.exp15_knowledge import make_kb
+from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
+from rsiguard.backends import MLXBackend, mx_seed
 
 
 def mem_worked(kb, rho, rng):
+    """Return worked fact records with a fraction rho rebuilt around a wrong value."""
     idx = rng.permutation(len(kb))
-    bad = set(idx[:int(round(rho * len(kb)))].tolist())
+    bad = set(idx[: int(round(rho * len(kb)))].tolist())
     out = []
     for i, it in enumerate(kb):
         if i in bad:
             wrong = it["gold"] + int(rng.choice([-5, -3, -2, -1, 1, 2, 3, 5]))
-            # rebuild the record with the wrong fact (a str.replace on the value
-            # string could also mangle the entity id if it contains that substring)
-            sol = (f"Product #{it['eid']} record: the warranty period is {wrong} "
-                   f"months.\nANSWER: {wrong}")
+            # Rebuild the record: str.replace on the value could also change the
+            # entity id when it contains the same digits.
+            sol = (
+                f"Product #{it['eid']} record: the warranty period is {wrong} "
+                f"months.\nANSWER: {wrong}"
+            )
         else:
             sol = it["worked"]
         out.append({"problem": it["problem"], "sol": sol})
@@ -42,6 +41,7 @@ def mem_worked(kb, rho, rng):
 
 
 def acc(be, kb, mem, k):
+    """Accuracy over the KB entities with top-k retrieval from `mem` (None: no-memory)."""
     embs = None if mem is None else be.embed([m["problem"] for m in mem])
     corr = []
     for it in kb:
@@ -81,16 +81,19 @@ def main():
             kb = make_kb(args.n, s)
             row = {"model": key, "seed": s, "nomem": acc(be, kb, None, 0), "rho_acc": {}}
             for rho in rhos:
-                row["rho_acc"][str(rho)] = acc(be, kb, mem_worked(kb, rho, np.random.default_rng(s + int(rho * 100))), args.k)
+                row["rho_acc"][str(rho)] = acc(
+                    be, kb, mem_worked(kb, rho, np.random.default_rng(s + int(rho * 100))), args.k
+                )
             records.append(row)
             accs = " ".join(f"{r}:{row['rho_acc'][str(r)]:.2f}" for r in rhos)
             print(f"  seed{s}: nomem={row['nomem']:.2f} | rho-> {accs}", flush=True)
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 60)
-    print(" exp16 — KNOWLEDGE accuracy vs pollution rho (mean over seeds)")
+    print(" exp16: knowledge accuracy vs corrupted fraction rho (mean over seeds)")
     print("=" * 60)
     for key in [m.strip() for m in args.models.split(",")]:
         rs = [r for r in records if r["model"] == key]
@@ -100,7 +103,6 @@ def main():
         curve = " ".join(f"{r}={np.mean([x['rho_acc'][str(r)] for x in rs]):.2f}" for r in rhos)
         print(f"  {key:<14} nomem={nm:.2f} | {curve}")
     print("=" * 60)
-    print("CLIFF expected (vs flat procedural) -> verify memory only for lookup.")
     print(f"saved -> {args.out}")
 
 

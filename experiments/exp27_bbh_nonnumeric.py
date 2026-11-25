@@ -1,27 +1,11 @@
-"""exp27 — NON-NUMERIC procedural benchmarks: BBH word_sorting and
-tracking_shuffled_objects_three_objects.
+"""Answer corruption on BBH tasks with non-numeric answers (word lists, option letters, labels).
 
-The paper's procedural evidence is all integer arithmetic/counting. exp27 extends
-the answer-corruption contrast to two non-numeric recomputable procedures:
-  - word_sorting: sort a word list alphabetically (string answer = the sorted list)
-  - tracking_shuffled_objects_three_objects: state tracking through swaps
-    (multiple-choice answer "(A)"/"(B)"/"(C)")
-
-Same protocol as exp22 BBH (nomem / answer_only / worked_clean / worked_ans_bad;
-memory = the model's OWN correct solutions among held-out candidates; cosine top-k
-retrieval; pool and test disjoint). Corruption replaces ONLY the final ANSWER line
-with a plausible wrong value of the same type (a different permutation of the same
-words / a different option letter).
-
-Prediction (dichotomy, procedural side): worked_clean ≈ worked_ans_bad, i.e. the
-answer-corruption drop stays within a few points on procedures that are not
-arithmetic.
-
-Usage:
-  HF_HUB_OFFLINE=0 .venv/bin/python experiments/exp27_bbh_nonnumeric.py \
-      --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b \
-      --bbh-task word_sorting --n-pool 60 --n-test 25 --seeds 5
+The pool holds the model's own correct solutions to held-out items; retrieval is cosine top-k;
+pool and test items are disjoint.
+Conditions: nomem, worked_clean, worked_ans_bad (answer field replaced by a wrong value of the
+same type), answer_only. One result row per model and seed.
 """
+
 import argparse
 import json
 import os
@@ -32,8 +16,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
 from experiments.models import MODELS
+from rsiguard.backends import MLXBackend, mx_seed
 
 CONDS = ["nomem", "worked_clean", "worked_ans_bad", "answer_only"]
 _ANS_LINE = re.compile(r"ANSWER:\s*([^\n]*)")
@@ -45,12 +29,18 @@ def norm(s):
     return re.sub(r"\s+", " ", s)
 
 
-FLIP = {"true": "False", "false": "True", "yes": "No", "no": "Yes",
-        "valid": "invalid", "invalid": "valid"}
+FLIP = {
+    "true": "False",
+    "false": "True",
+    "yes": "No",
+    "no": "Yes",
+    "valid": "invalid",
+    "invalid": "valid",
+}
 
 
 def parse_options(problem):
-    """Option letter -> normalized option text, from a BBH multiple-choice input."""
+    """Map option letter to normalized option text for a BBH multiple-choice input."""
     opts = {}
     for m in re.finditer(r"\(([A-Z])\)\s*([^\n(]*)", problem.split("Options:")[-1]):
         opts[m.group(1).lower()] = norm(m.group(2))
@@ -61,12 +51,15 @@ def build_prompt(problem, exemplars):
     shots = ""
     for ex in exemplars:
         shots += f"Solved example:\nProblem: {ex['problem']}\nSolution: {ex['sol']}\n\n"
-    return (shots + "Solve the new problem, using the solved examples as guidance.\n"
-            f"Problem: {problem}\nEnd with EXACTLY two lines:\n"
-            "ANSWER: <your final answer>\nCONFIDENCE: <0-100>")
+    return (
+        shots + "Solve the new problem, using the solved examples as guidance.\n"
+        f"Problem: {problem}\nEnd with EXACTLY two lines:\n"
+        "ANSWER: <your final answer>\nCONFIDENCE: <0-100>"
+    )
 
 
 def solve_str(be, problem, exemplars):
+    """Return (text of the answer field or None, generated text)."""
     txt = be.gen(build_prompt(problem, exemplars))
     m = _ANS_LINE.search(txt)
     return (m.group(1).strip() if m else None), txt
@@ -89,12 +82,12 @@ def is_correct(pred, item):
 
 
 def wrong_answer(item, rng):
-    """A plausible wrong answer of the same type as the gold."""
+    """A wrong answer of the same type as the gold answer."""
     g = item["gold"].strip()
     gl = _OPT.search(norm(g))
     if gl:  # multiple choice: a different option present in the problem
         letters = sorted(parse_options(item["problem"]).keys()) or ["a", "b", "c"]
-        others = [l for l in letters if l != gl.group(1)]
+        others = [letter for letter in letters if letter != gl.group(1)]
         return f"({rng.choice(others).upper()})"
     if norm(g) in FLIP:  # binary label (True/False etc.): the other label
         return FLIP[norm(g)]
@@ -109,11 +102,13 @@ def wrong_answer(item, rng):
 
 def load_data(bbh_task, n_pool, n_test, seed):
     from datasets import load_dataset
+
     rng = np.random.default_rng(seed + 909)
     ds = load_dataset("lukaemon/bbh", bbh_task)["test"]
     idx = rng.choice(len(ds), size=min(n_pool + n_test, len(ds)), replace=False)
-    items = [{"problem": ds[int(i)]["input"], "gold": str(ds[int(i)]["target"]).strip()}
-             for i in idx]
+    items = [
+        {"problem": ds[int(i)]["input"], "gold": str(ds[int(i)]["target"]).strip()} for i in idx
+    ]
     return items[:n_pool], items[n_pool:]
 
 
@@ -192,15 +187,19 @@ def main():
             for c in CONDS:
                 row[c] = acc(be, pool, test, c, args.k, s)
             records.append(row)
-            print(f"  seed{s} (pool={len(pool)}): "
-                  + " ".join(f"{c}={row[c]:.2f}" for c in CONDS), flush=True)
-            json.dump(records, open(out, "w"), indent=2)  # checkpoint per seed
+            print(
+                f"  seed{s} (pool={len(pool)}): " + " ".join(f"{c}={row[c]:.2f}" for c in CONDS),
+                flush=True,
+            )
+            with open(out, "w") as fp:
+                json.dump(records, fp, indent=2)
         del be
 
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    json.dump(records, open(out, "w"), indent=2)
+    with open(out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 72)
-    print(f" exp27 — BBH {args.bbh_task} (non-numeric procedural)")
+    print(f" exp27: BBH {args.bbh_task} (non-numeric procedural)")
     print("=" * 72)
     print(f"{'model':<16}" + "".join(f"{c:>16}" for c in CONDS))
     for key in [m.strip() for m in args.models.split(",")]:

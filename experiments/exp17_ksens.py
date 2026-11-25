@@ -1,13 +1,9 @@
-"""exp17 — retrieval-k sensitivity (robustness check of the dichotomy).
+"""Sensitivity of accuracy to the number of retrieved exemplars k.
 
-Does the procedure-benefit (procedural) and the fact-benefit (knowledge) hold
-across retrieval sizes k? Sweeps k for worked-clean memory on a procedural task
-(invoice) and the knowledge task.
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp17_ksens.py \
-      --models phi4-mini,granite4.1-8b --ks 1,3,5,8 --seeds 2
+Sweeps k with clean worked exemplars on a procedural task (invoice, random retrieval) and
+on the synthetic fact-lookup task (top-k embedding retrieval).
 """
+
 import argparse
 import json
 import os
@@ -17,11 +13,12 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend
-from experiments.models import MODELS
-from experiments.pools import POOLS, build_clean_pool, acc_with
 from experiments.exp15_knowledge import make_kb
-from experiments.exp16_knowledge_rho import mem_worked, acc as kn_acc
+from experiments.exp16_knowledge_rho import acc as kn_acc
+from experiments.exp16_knowledge_rho import mem_worked
+from experiments.models import MODELS
+from experiments.pools import POOLS, acc_with, build_clean_pool
+from rsiguard.backends import MLXBackend
 
 
 def main():
@@ -46,22 +43,29 @@ def main():
             print(f"  !! load failed: {e}", flush=True)
             continue
         for s in range(args.seeds):
-            # procedural (invoice), worked-clean memory
             test = POOLS["invoice"](args.test, np.random.default_rng(s + 7777))
             clean = build_clean_pool(be, POOLS["invoice"], args.pool, s, "model")
             proc = {str(k): acc_with(be, clean, test, k, np.random.default_rng(s + 1)) for k in ks}
-            # knowledge (clean facts)
+            # rho = 0: uncorrupted fact records
             kb = make_kb(args.n, s)
-            know = {str(k): kn_acc(be, kb, mem_worked(kb, 0.0, np.random.default_rng(s)), k) for k in ks}
+            know = {
+                str(k): kn_acc(be, kb, mem_worked(kb, 0.0, np.random.default_rng(s)), k) for k in ks
+            }
             records.append({"model": key, "seed": s, "proc": proc, "know": know})
-            print(f"  seed{s} proc(invoice): " + " ".join(f"k{k}={proc[str(k)]:.2f}" for k in ks) +
-                  " | know: " + " ".join(f"k{k}={know[str(k)]:.2f}" for k in ks), flush=True)
+            print(
+                f"  seed{s} proc(invoice): "
+                + " ".join(f"k{k}={proc[str(k)]:.2f}" for k in ks)
+                + " | know: "
+                + " ".join(f"k{k}={know[str(k)]:.2f}" for k in ks),
+                flush=True,
+            )
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 60)
-    print(" exp17 — accuracy vs retrieval k (mean over seeds)")
+    print(" exp17: accuracy vs retrieval k (mean over seeds)")
     print("=" * 60)
     for key in [m.strip() for m in args.models.split(",")]:
         rs = [r for r in records if r["model"] == key]

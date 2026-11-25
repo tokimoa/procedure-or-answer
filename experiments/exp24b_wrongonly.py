@@ -1,31 +1,22 @@
-"""exp24b — control for exp24: pools of ONLY the model's natural wrong solutions.
+"""Pools made only of each model's own wrong solutions, read from exp24_unfiltered.py output.
 
-exp24 showed unfiltered pools (mixed correct/wrong) are inert (= nomem). Two readings:
-(a) dilution + heterogeneity: natural errors cancel the benefit but cannot invert it;
-(b) the correct exemplars in the mix mask real harm from the wrong ones.
-This control feeds each model its own natural WRONG solutions undiluted (pool =
-exp24's stored wrong_exemplars; same test sets, same retrieval). If accuracy stays
-at ~nomem, natural errors are individually weak/heterogeneous (supports (a) and the
-"too heterogeneous to invert" reading); if it collapses below nomem, natural errors
-act like exp18's coherent wrong methods once undiluted — either way the mechanism
-paragraph of sec:unfiltered gets a measured basis.
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp24b_wrongonly.py \
-      --in results/exp24_unfiltered.json --out results/exp24b_wrongonly.json
+Regenerates the same test sets and compares wrong-only accuracy with the no-memory
+accuracy stored in the input file, so --test must match the value used for that run.
 """
+
 import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
 from experiments.models import MODELS
 from experiments.pools import POOLS, acc_with
+from rsiguard.backends import MLXBackend, mx_seed
 
 
 def main():
@@ -37,7 +28,7 @@ def main():
     ap.add_argument("--out", default="results/exp24b_wrongonly.json")
     args = ap.parse_args()
 
-    src = json.load(open(args.inp))
+    src = json.loads(Path(args.inp).read_text())
     by_model = {}
     for r in src:
         by_model.setdefault(r["model"], []).append(r)
@@ -58,31 +49,44 @@ def main():
             mx_seed(s)
             test = POOLS[r["task"]](args.test, np.random.default_rng(s + 7777))
             acc = acc_with(be, wrong, test, args.k, np.random.default_rng(s + 1))
-            row = {"model": key, "task": r["task"], "seed": s,
-                   "wrongonly": acc, "pool_wrong": len(wrong),
-                   "nomem": r["nomem"], "worked_filtered": r["worked_filtered"],
-                   "worked_unfiltered": r["worked_unfiltered"]}
+            row = {
+                "model": key,
+                "task": r["task"],
+                "seed": s,
+                "wrongonly": acc,
+                "pool_wrong": len(wrong),
+                "nomem": r["nomem"],
+                "worked_filtered": r["worked_filtered"],
+                "worked_unfiltered": r["worked_unfiltered"],
+            }
             records.append(row)
-            print(f"  {r['task']:<11} seed{s}: wrongonly={acc:.2f} "
-                  f"(nomem={r['nomem']:.2f} unf={r['worked_unfiltered']:.2f} "
-                  f"pool={len(wrong)})", flush=True)
+            print(
+                f"  {r['task']:<11} seed{s}: wrongonly={acc:.2f} "
+                f"(nomem={r['nomem']:.2f} unf={r['worked_unfiltered']:.2f} "
+                f"pool={len(wrong)})",
+                flush=True,
+            )
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
 
     from scipy import stats as st
+
     print("\n" + "=" * 70)
-    print(" exp24b — wrong-only natural-error pools vs nomem (paired)")
+    print(" exp24b: wrong-only natural-error pools vs nomem (paired)")
     print("=" * 70)
     print(f"{'model':<16}{'nomem':>8}{'wrongonly':>11}{'unfiltered':>12}")
     for key in by_model:
         rs = [r for r in records if r["model"] == key]
         if not rs:
             continue
-        print(f"{key:<16}{np.mean([r['nomem'] for r in rs]):>8.2f}"
-              f"{np.mean([r['wrongonly'] for r in rs]):>11.2f}"
-              f"{np.mean([r['worked_unfiltered'] for r in rs]):>12.2f}")
+        print(
+            f"{key:<16}{np.mean([r['nomem'] for r in rs]):>8.2f}"
+            f"{np.mean([r['wrongonly'] for r in rs]):>11.2f}"
+            f"{np.mean([r['worked_unfiltered'] for r in rs]):>12.2f}"
+        )
     d = [r["wrongonly"] - r["nomem"] for r in records]
     t, p = st.ttest_rel([r["wrongonly"] for r in records], [r["nomem"] for r in records])
     ci = st.t.ppf(0.975, len(d) - 1) * np.std(d, ddof=1) / np.sqrt(len(d))

@@ -1,20 +1,10 @@
-"""exp13 — what is the ACTIVE INGREDIENT of memory: procedure or answer?
+"""Compare exemplar formats on synthetic procedural tasks with random retrieval.
 
-A pilot pollution sweep showed that corrupting stored answers barely matters. Hypothesis: the benefit
-comes from the DEMONSTRATED PROCEDURE (worked reasoning), not the answer. Test by
-comparing exemplar formats at matched retrieval:
-  - nomem          : no exemplars
-  - answer_only    : "ANSWER: <gold>" (correct answer, NO reasoning)
-  - worked_clean   : full model reasoning + correct answer
-  - worked_ans_bad : full reasoning, but the ANSWER corrupted (procedure intact)
-
-Prediction: worked_clean ≈ worked_ans_bad  >  answer_only ≈ nomem
-=> procedure is the active ingredient; answer correctness is not.
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp13_ingredient.py \
-      --models phi4-mini,ministral3-3b,granite4.1-8b --tasks arith_hard,invoice --seeds 3
+Conditions: nomem (no exemplars), answer_only ("ANSWER: <gold>" with no reasoning),
+worked_clean (the model's own correct worked solution) and worked_ans_bad (the same
+solutions with every answer field corrupted). One record per model, task and seed.
 """
+
 import argparse
 import json
 import os
@@ -24,16 +14,18 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
 from experiments.models import MODELS
-from experiments.pools import POOLS, build_clean_pool, corrupt, acc_with
+from experiments.pools import POOLS, acc_with, build_clean_pool, corrupt
+from rsiguard.backends import MLXBackend, mx_seed
 
 CONDS = ["nomem", "answer_only", "worked_clean", "worked_ans_bad"]
 
 
 def answer_only(pool):
-    return [{"problem": it["problem"], "gold": it["gold"], "sol": f"ANSWER: {it['gold']}"}
-            for it in pool]
+    return [
+        {"problem": it["problem"], "gold": it["gold"], "sol": f"ANSWER: {it['gold']}"}
+        for it in pool
+    ]
 
 
 def main():
@@ -63,24 +55,36 @@ def main():
                 mx_seed(s)
                 test = pf(args.test, np.random.default_rng(s + 7777))
                 clean = build_clean_pool(be, pf, args.pool, s, "model")
-                r = lambda: np.random.default_rng(s + 1)
-                row = {"model": key, "task": task, "seed": s,
-                       "nomem": acc_with(be, None, test, 0, r()),
-                       "answer_only": acc_with(be, answer_only(clean), test, args.k, r()),
-                       "worked_clean": acc_with(be, clean, test, args.k, r()),
-                       "worked_ans_bad": acc_with(be, corrupt(clean, 1.0, np.random.default_rng(s)),
-                                                  test, args.k, r()),
-                       "pool": len(clean)}
+
+                # Same exemplar draws for every condition.
+                def fresh_rng(seed=s):
+                    return np.random.default_rng(seed + 1)
+
+                row = {
+                    "model": key,
+                    "task": task,
+                    "seed": s,
+                    "nomem": acc_with(be, None, test, 0, fresh_rng()),
+                    "answer_only": acc_with(be, answer_only(clean), test, args.k, fresh_rng()),
+                    "worked_clean": acc_with(be, clean, test, args.k, fresh_rng()),
+                    "worked_ans_bad": acc_with(
+                        be, corrupt(clean, 1.0, np.random.default_rng(s)), test, args.k, fresh_rng()
+                    ),
+                    "pool": len(clean),
+                }
                 records.append(row)
-                print(f"  {task:<11} seed{s}: " +
-                      " ".join(f"{c}={row[c]:.2f}" for c in CONDS), flush=True)
+                print(
+                    f"  {task:<11} seed{s}: " + " ".join(f"{c}={row[c]:.2f}" for c in CONDS),
+                    flush=True,
+                )
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
 
     print("\n" + "=" * 70)
-    print(" exp13 — active ingredient (mean over seeds)")
+    print(" exp13: procedural accuracy by exemplar format (mean over seeds)")
     print("=" * 70)
     print(f"{'model/task':<24}" + "".join(f"{c:>15}" for c in CONDS))
     for task in tasks:
@@ -88,7 +92,10 @@ def main():
             rs = [r for r in records if r["model"] == key and r["task"] == task]
             if not rs:
                 continue
-            print(f"{key+'/'+task:<24}" + "".join(f"{np.mean([r[c] for r in rs]):>15.2f}" for c in CONDS))
+            print(
+                f"{key + '/' + task:<24}"
+                + "".join(f"{np.mean([r[c] for r in rs]):>15.2f}" for c in CONDS)
+            )
     print("=" * 70)
     print("procedure is the active ingredient if worked_* > answer_only ≈ nomem")
     print(f"saved -> {args.out}")

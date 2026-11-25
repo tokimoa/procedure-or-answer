@@ -1,1 +1,1 @@
-"""Shared on-device inference backend for the experiments."""
+"""MLX inference backend shared by the experiments."""

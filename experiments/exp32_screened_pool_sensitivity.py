@@ -1,14 +1,13 @@
-"""Downstream sensitivity to answer-filter false positives.
+"""Sensitivity of downstream accuracy to flawed exemplars that pass the answer filter.
 
-Uses the archived answer-correct pools from exp31.  ``screened`` removes
-exemplars that either (a) state a nearest/unspecified rounding rule where the
-benchmark generator uses floor, or (b) contain a manually confirmed false
-numeric equation.  Two chained-equation parser false positives are retained.
-
-The test items and random k-shot sampling match exp24.  Predictions are
-checkpointed item-by-item so the four models can be run sequentially safely.
+Uses the archived answer-correct pools from exp31 with the diagnostics added by
+audit_filtered_pool.py. The answer_filtered condition uses the full pool; screened removes
+exemplars with a rounding conflict or a confirmed false equation.
+Test items and k-shot sampling match exp24_unfiltered.py. Predictions are checkpointed per item.
 """
+
 import argparse
+import contextlib
 import gc
 import json
 import os
@@ -20,14 +19,13 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
 from experiments.pools import POOLS
 from rsiguard.backends import MLXBackend, mx_seed
 
-
-# These are correct chained calculations; the equation regex stops at the
-# first intermediate equality and therefore flags them spuriously.
+# (model, task, seed, exemplar_index) of correct chained calculations that the equation
+# regex flags because it stops at the first intermediate equality.
 EQUATION_PARSER_FALSE_POSITIVES = {
     ("llama3.2-3b", "invoice", 1, 16),
     ("ministral3-3b", "invoice", 1, 8),
@@ -70,9 +68,7 @@ def main():
         default="answer_filtered,screened",
         help="comma-separated subset; screened-only can reuse exp24's baseline",
     )
-    ap.add_argument(
-        "--out", default="results/exp32_screened_only.json"
-    )
+    ap.add_argument("--out", default="results/exp32_screened_only.json")
     args = ap.parse_args()
 
     models = [x.strip() for x in args.models.split(",") if x.strip()]
@@ -93,8 +89,7 @@ def main():
     else:
         data = {"meta": vars(args), "records": []}
     done = {
-        (r["model"], r["task"], r["seed"], r["item_index"], r["condition"])
-        for r in data["records"]
+        (r["model"], r["task"], r["seed"], r["item_index"], r["condition"]) for r in data["records"]
     }
 
     for model in models:
@@ -116,15 +111,14 @@ def main():
                 for condition, pool in variants.items():
                     rng = np.random.default_rng(seed + 1)
                     sampled = [
-                        rng.permutation(len(pool))[: args.k].tolist() if pool else []
-                        for _ in test
+                        rng.permutation(len(pool))[: args.k].tolist() if pool else [] for _ in test
                     ]
                     for i, item in enumerate(test):
                         key = (model, task, seed, i, condition)
                         if key in done:
                             continue
-                        # Common random numbers across the two conditions make
-                        # the item-level contrast paired and restart-safe.
+                        # The decoding seed depends only on the item, so the two
+                        # conditions are paired and a resumed run is reproducible.
                         mx_seed(seed * 1000 + i)
                         ex = [
                             {
@@ -161,10 +155,8 @@ def main():
                         ]
                     )
                     print(f"    {condition}: {acc:.3f}", flush=True)
-        try:
+        with contextlib.suppress(Exception):
             be.mx.clear_cache()
-        except Exception:
-            pass
         del be
         gc.collect()
 

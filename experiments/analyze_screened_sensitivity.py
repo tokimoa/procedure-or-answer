@@ -1,12 +1,18 @@
-"""Summarize exp32 with seed-cell paired bootstrap intervals."""
+"""Summarize exp32: screened versus answer-filtered accuracy over (model, task, seed) cells.
+
+Prints the mean difference with a 95% bootstrap interval, pooled and per (model, task).
+"""
+
 import argparse
 import json
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 
 
 def ci_mean(values, rng, n_boot=20000):
+    """95% percentile-bootstrap interval (lo, hi) for the mean of values."""
     values = np.asarray(values, dtype=float)
     if len(values) == 1:
         return float(values[0]), float(values[0])
@@ -18,7 +24,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
     args = ap.parse_args()
-    data = json.load(open(args.path, encoding="utf-8"))["records"]
+    data = json.loads(Path(args.path).read_text(encoding="utf-8"))["records"]
     item = defaultdict(dict)
     for r in data:
         key = (r["model"], r["task"], r["seed"], r["item_index"])
@@ -31,19 +37,21 @@ def main():
     for (model, task, seed), conditions in sorted(cells.items()):
         if not {"answer_filtered", "screened"} <= conditions.keys():
             continue
-        rows.append({
-            "model": model,
-            "task": task,
-            "seed": seed,
-            "answer_filtered": np.mean(conditions["answer_filtered"]),
-            "screened": np.mean(conditions["screened"]),
-        })
+        rows.append(
+            {
+                "model": model,
+                "task": task,
+                "seed": seed,
+                "answer_filtered": np.mean(conditions["answer_filtered"]),
+                "screened": np.mean(conditions["screened"]),
+            }
+        )
     rng = np.random.default_rng(20260918)
     groups = [("POOLED", rows)]
     for model, task in sorted(set((r["model"], r["task"]) for r in rows)):
-        groups.append((f"{model}/{task}", [
-            r for r in rows if r["model"] == model and r["task"] == task
-        ]))
+        groups.append(
+            (f"{model}/{task}", [r for r in rows if r["model"] == model and r["task"] == task])
+        )
     for name, group in groups:
         a = np.array([r["answer_filtered"] for r in group])
         b = np.array([r["screened"] for r in group])

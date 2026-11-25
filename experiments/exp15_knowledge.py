@@ -1,18 +1,10 @@
-"""exp15 — the BOUNDARY: on a KNOWLEDGE-lookup task, does the answer matter?
+"""Compare exemplar formats on a synthetic fact-lookup task (warranty period of Product #id).
 
-Procedural tasks: memory's value is the procedure, answer irrelevant (exp13).
-Prediction/contrast: on a task where the memory must supply an arbitrary FACT the
-model cannot recompute, the ANSWER is the content — so answer-corruption should HURT
-and answer_only should HELP (opposite of procedural tasks).
-
-Synthetic KB: Product #E has warranty V months (V random, not derivable). Test asks
-V for entities that ARE in memory; retrieval by embedding should surface the fact.
-Conditions: nomem / answer_only / worked_clean / worked_ans_bad (fact corrupted).
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp15_knowledge.py \
-      --models phi4-mini,ministral3-3b,granite4.1-8b --n 24 --test 20 --k 3 --seeds 3
+The values are random, so a correct answer has to come from memory. Queries are the stored
+entities, retrieved top-k by embedding similarity. Conditions: nomem, answer_only,
+worked_clean and worked_ans_bad (every fact record rebuilt with a wrong value).
 """
+
 import argparse
 import json
 import os
@@ -22,24 +14,35 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
+from rsiguard.backends import MLXBackend, mx_seed
 
 CONDS = ["nomem", "answer_only", "worked_clean", "worked_ans_bad"]
 
 
 def make_kb(n, seed):
+    """Return n fact records: entity id, gold value, question and both memory texts."""
     rng = np.random.default_rng(seed + 4242)
     items = []
     for _ in range(n):
         eid = int(rng.integers(1000, 9999))
         val = int(rng.integers(6, 60))
-        q = (f"What is the warranty period, in months, of Product #{eid}? "
-             f"End with EXACTLY: ANSWER: <integer>")
-        items.append({"eid": eid, "gold": val, "problem": q,
-                      "worked": f"Product #{eid} record: the warranty period is {val} months.\nANSWER: {val}",
-                      "answer_only": f"Product #{eid}: {val}"})
+        q = (
+            f"What is the warranty period, in months, of Product #{eid}? "
+            f"End with EXACTLY: ANSWER: <integer>"
+        )
+        items.append(
+            {
+                "eid": eid,
+                "gold": val,
+                "problem": q,
+                "worked": (
+                    f"Product #{eid} record: the warranty period is {val} months.\nANSWER: {val}"
+                ),
+                "answer_only": f"Product #{eid}: {val}",
+            }
+        )
     return items
 
 
@@ -50,10 +53,12 @@ def mem_items(kb, cond, rng):
             sol = it["answer_only"]
         elif cond == "worked_ans_bad":
             wrong = it["gold"] + int(rng.choice([-5, -3, -2, -1, 1, 2, 3, 5]))
-            # rebuild the record with the wrong fact (a str.replace on the value
-            # string could also mangle the entity id if it contains that substring)
-            sol = (f"Product #{it['eid']} record: the warranty period is {wrong} "
-                   f"months.\nANSWER: {wrong}")
+            # Rebuild the record: str.replace on the value could also change the
+            # entity id when it contains the same digits.
+            sol = (
+                f"Product #{it['eid']} record: the warranty period is {wrong} "
+                f"months.\nANSWER: {wrong}"
+            )
         else:  # worked_clean
             sol = it["worked"]
         out.append({"problem": it["problem"], "sol": sol})
@@ -65,7 +70,7 @@ def acc(be, kb, cond, k, seed):
     mem = None if cond == "nomem" else mem_items(kb, cond, rng)
     embs = None if mem is None else be.embed([m["problem"] for m in mem])
     corr = []
-    for it in kb:  # test = the same entities (they must be in memory)
+    for it in kb:  # queries are the stored entities
         if mem is None:
             ex = []
         else:
@@ -81,7 +86,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", default="phi4-mini,ministral3-3b,granite4.1-8b")
     ap.add_argument("--n", type=int, default=24, help="KB size (= test size)")
-    ap.add_argument("--test", type=int, default=20)  # unused; test == kb entities
+    ap.add_argument("--test", type=int, default=20)  # unused: the KB is the test set
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--max-tokens", type=int, default=120)
@@ -107,10 +112,11 @@ def main():
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
 
     print("\n" + "=" * 64)
-    print(" exp15 — KNOWLEDGE task: does the answer matter? (mean over seeds)")
+    print(" exp15: knowledge lookup, accuracy by condition (mean over seeds)")
     print("=" * 64)
     print(f"{'model':<16}" + "".join(f"{c:>15}" for c in CONDS))
     for key in [m.strip() for m in args.models.split(",")]:
@@ -119,7 +125,6 @@ def main():
             continue
         print(f"{key:<16}" + "".join(f"{np.mean([r[c] for r in rs]):>15.2f}" for c in CONDS))
     print("=" * 64)
-    print("BOUNDARY confirmed if here answer_only ≈ worked_clean >> worked_ans_bad")
     print("(opposite of procedural tasks) -> the answer matters for knowledge lookup.")
     print(f"saved -> {args.out}")
 

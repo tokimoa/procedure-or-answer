@@ -1,13 +1,20 @@
-"""Statistical summaries for the fixed-set evaluations added after review (exp29/exp30)."""
+"""Item-level statistics for the fixed-set evaluations (exp29, exp30).
+
+Prints bootstrap intervals for condition accuracies, paired clean - corrupt effects with exact
+McNemar tests, and, for exp29, non-oracle accuracy split by retrieval hit.
+"""
+
 import argparse
 import json
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 from scipy import stats
 
 
 def bootstrap_mean(values, rng, draws=20000):
+    """Return (mean, 2.5% quantile, 97.5% quantile) of the bootstrapped mean."""
     x = np.asarray(values, dtype=float)
     if len(x) == 0:
         return float("nan"), float("nan"), float("nan")
@@ -21,34 +28,24 @@ def bootstrap_mean(values, rng, draws=20000):
 
 
 def paired_rows(records, model, clean, corrupt, id_key):
-    a = {
-        r[id_key]: r
-        for r in records
-        if r["model"] == model and r["condition"] == clean
-    }
-    b = {
-        r[id_key]: r
-        for r in records
-        if r["model"] == model and r["condition"] == corrupt
-    }
+    """(clean, corrupt) record pairs for the items present in both conditions."""
+    a = {r[id_key]: r for r in records if r["model"] == model and r["condition"] == clean}
+    b = {r[id_key]: r for r in records if r["model"] == model and r["condition"] == corrupt}
     ids = sorted(set(a) & set(b))
     return [(a[i], b[i]) for i in ids]
 
 
 def exact_mcnemar(pairs):
+    """Return (clean-only correct count, corrupt-only correct count, exact p)."""
     clean_only = sum(a["correct"] == 1 and b["correct"] == 0 for a, b in pairs)
     corrupt_only = sum(a["correct"] == 0 and b["correct"] == 1 for a, b in pairs)
     discordant = clean_only + corrupt_only
-    p = (
-        float(stats.binomtest(clean_only, discordant, 0.5).pvalue)
-        if discordant
-        else 1.0
-    )
+    p = float(stats.binomtest(clean_only, discordant, 0.5).pvalue) if discordant else 1.0
     return clean_only, corrupt_only, p
 
 
 def analyze_file(path, rng):
-    data = json.load(open(path, encoding="utf-8"))
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
     records = data["records"]
     models = sorted({r["model"] for r in records})
     conditions = sorted({r["condition"] for r in records})
@@ -92,18 +89,13 @@ def analyze_file(path, rng):
                 f"[{lo:+.3f},{hi:+.3f}] discordant={n10}/{n01} p={p:.4g}"
             )
     for (clean, corrupt), effects in macro.items():
-        print(
-            f"  MACRO {clean}-{corrupt}: "
-            f"{np.mean(effects):+.3f} over {len(effects)} models"
-        )
+        print(f"  MACRO {clean}-{corrupt}: {np.mean(effects):+.3f} over {len(effects)} models")
 
     if "nonoracle_clean" in conditions:
         print("non-oracle clean accuracy conditional on retrieval")
         for model in models:
             rows = [
-                r
-                for r in records
-                if r["model"] == model and r["condition"] == "nonoracle_clean"
+                r for r in records if r["model"] == model and r["condition"] == "nonoracle_clean"
             ]
             for hit in (1, 0):
                 subset = [r["correct"] for r in rows if r["hit_at_k"] == hit]

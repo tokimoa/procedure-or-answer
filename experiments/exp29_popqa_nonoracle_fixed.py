@@ -1,17 +1,14 @@
-"""Fixed-set PopQA with non-oracle retrieval.
+"""PopQA on a fixed test set with direct and non-oracle retrieval.
 
-This is a narrow extension of exp19_popqa.py.  It keeps the same task,
-models, answer parser, corruption, and k=3 retrieval, while removing two
-limitations of the original evaluation:
-
-* a fixed test set replaces 24-item per-seed samples;
-* the non-oracle variant indexes structured (subject, relation) keys instead
-  of the verbatim test question and includes same-entity relation distractors.
-
-The script checkpoints every item and can safely be resumed with the same
-arguments.  Models are loaded one at a time to bound unified-memory use.
+Direct retrieval indexes each fact record by its verbatim question. Non-oracle retrieval indexes
+a structured (subject, relation) key, and the store also holds other relations of the same
+entity as distractors.
+Conditions: nomem, direct_clean, direct_corrupt, nonoracle_clean, nonoracle_corrupt.
+Every item is checkpointed, so a run can be resumed with the same arguments.
 """
+
 import argparse
+import contextlib
 import gc
 import json
 import os
@@ -24,10 +21,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiments.models import MODELS
 from experiments.exp19_popqa import correct, norm, solve
+from experiments.models import MODELS
 from rsiguard.backends import MLXBackend, mx_seed
-
 
 CONDS = [
     "nomem",
@@ -43,6 +39,7 @@ def _qnorm(text):
 
 
 def _aliases(row):
+    """Normalized gold answers: the object and its aliases."""
     try:
         aliases = json.loads(row["o_aliases"]) if row.get("o_aliases") else []
     except (TypeError, json.JSONDecodeError):
@@ -51,11 +48,10 @@ def _aliases(row):
 
 
 def load_fixed_items(tail_n=5000, max_subjects=0):
-    """Select long-tail entities with >=2 distinct, unambiguous relations.
+    """Return (store, targets) for long-tail entities with at least two unambiguous relations.
 
-    Exact duplicate questions are removed globally before grouping.  One
-    deterministic relation per entity becomes the query; all remaining
-    relations stay in the store as same-entity distractors.
+    Questions that occur more than once are dropped before grouping. One deterministic relation
+    per entity becomes the query; the entity's other relations stay in the store as distractors.
     """
     from datasets import load_dataset
 
@@ -96,9 +92,7 @@ def load_fixed_items(tail_n=5000, max_subjects=0):
                 "q": str(row["question"]),
                 "golds": _aliases(row),
                 "direct_key": str(row["question"]),
-                "nonoracle_key": (
-                    f"Subject: {row['subj']}. Relation: {row['prop']}."
-                ),
+                "nonoracle_key": (f"Subject: {row['subj']}. Relation: {row['prop']}."),
             }
             store.append(item)
             if row is target_row:
@@ -107,7 +101,7 @@ def load_fixed_items(tail_n=5000, max_subjects=0):
 
 
 def corrupted_values(store):
-    """Return a deterministic wrong object for every record."""
+    """Map each record id to a deterministic wrong object taken from another record."""
     values = [item["obj"] for item in store]
     out = {}
     for i, item in enumerate(store):
@@ -128,22 +122,22 @@ def make_memory(store, corrupt_map, key_field, corrupt=False):
     memory = []
     for item in store:
         value = corrupt_map[item["rid"]] if corrupt else item["obj"]
-        memory.append({
-            "q": item[key_field],
-            "rid": item["rid"],
-            "sol": (
-                f"Stored fact: for {item['subj']}, {item['prop']} is {value}.\n"
-                f"ANSWER: {value}"
-            ),
-        })
+        memory.append(
+            {
+                "q": item[key_field],
+                "rid": item["rid"],
+                "sol": (
+                    f"Stored fact: for {item['subj']}, {item['prop']} is {value}.\nANSWER: {value}"
+                ),
+            }
+        )
     return memory
 
 
 def retrieve(be, query, keys, embeddings, k):
+    """Indices of the k stored keys most similar to the query (cosine)."""
     qe = be.embed([query])[0]
-    sims = embeddings @ qe / (
-        np.linalg.norm(embeddings, axis=1) * np.linalg.norm(qe) + 1e-9
-    )
+    sims = embeddings @ qe / (np.linalg.norm(embeddings, axis=1) * np.linalg.norm(qe) + 1e-9)
     return np.argsort(-sims)[:k].tolist()
 
 
@@ -167,7 +161,7 @@ def save_checkpoint(path, data):
 
 def summarize(records, models):
     print("\n" + "=" * 82)
-    print(" exp29 — fixed PopQA with direct vs non-oracle retrieval")
+    print(" exp29: fixed PopQA with direct vs non-oracle retrieval")
     print("=" * 82)
     for model in models:
         print(f"-- {model} --")
@@ -219,13 +213,9 @@ def main():
     if data["meta"] and data["meta"] != expected_meta:
         raise ValueError("Checkpoint metadata does not match the requested experiment")
     data["meta"] = expected_meta
-    done = {
-        (r["model"], r["condition"], r["target_rid"])
-        for r in data["records"]
-    }
+    done = {(r["model"], r["condition"], r["target_rid"]) for r in data["records"]}
     print(
-        f"fixed set: targets={len(targets)} store={len(store)} "
-        f"tail={args.tail_n} k={args.k}",
+        f"fixed set: targets={len(targets)} store={len(store)} tail={args.tail_n} k={args.k}",
         flush=True,
     )
 
@@ -234,12 +224,8 @@ def main():
     memories = {
         ("direct", False): make_memory(store, corrupt_map, "direct_key", corrupt=False),
         ("direct", True): make_memory(store, corrupt_map, "direct_key", corrupt=True),
-        ("nonoracle", False): make_memory(
-            store, corrupt_map, "nonoracle_key", corrupt=False
-        ),
-        ("nonoracle", True): make_memory(
-            store, corrupt_map, "nonoracle_key", corrupt=True
-        ),
+        ("nonoracle", False): make_memory(store, corrupt_map, "nonoracle_key", corrupt=False),
+        ("nonoracle", True): make_memory(store, corrupt_map, "nonoracle_key", corrupt=True),
     }
 
     for model_key in model_keys:
@@ -268,8 +254,8 @@ def main():
                     retrieved_ids = [store[i]["rid"] for i in idx]
                     hit_at_1 = int(bool(retrieved_ids) and retrieved_ids[0] == target["rid"])
                     hit_at_k = int(target["rid"] in retrieved_ids)
-                # The same item seed is used in every condition, making the
-                # clean/corrupt comparison paired and resume-stable.
+                # The decoding seed depends only on the item, so conditions are paired and
+                # a resumed run reproduces the same outputs.
                 mx_seed(args.seed * 100000 + item_index)
                 pred = solve(be, target["q"], chosen)
                 row = {
@@ -294,10 +280,8 @@ def main():
                         flush=True,
                     )
 
-        try:
+        with contextlib.suppress(Exception):
             be.mx.clear_cache()
-        except Exception:
-            pass
         del be
         gc.collect()
         summarize(data["records"], [model_key])

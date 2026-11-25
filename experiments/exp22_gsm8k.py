@@ -1,16 +1,10 @@
-"""exp22 — REAL procedural benchmark (GSM8K): the dichotomy's procedural side on real data.
+"""Compare exemplar formats on GSM8K (or SVAMP or a BIG-Bench Hard subtask via --dataset).
 
-Mirrors exp13 on a real, diverse math benchmark (not templated). Memory = the model's
-OWN correct worked solutions to other GSM8K problems (matched style); retrieval = top-k
-by embedding similarity. Prediction (procedural side, on real data):
-worked_clean ≈ worked_ans_bad  >  answer_only ≈ nomem
-(the demonstrated reasoning helps; corrupting its final answer is harmless — the model
-recomputes).
-
-Usage:
-  HF_HUB_OFFLINE=0 .venv/bin/python experiments/exp22_gsm8k.py \
-      --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b --n-pool 40 --n-test 24 --seeds 3
+The pool holds the model's own correct worked solutions to other problems, retrieved top-k
+by embedding similarity. Conditions: nomem, worked_clean, worked_ans_bad (every answer
+field corrupted) and answer_only.
 """
+
 import argparse
 import json
 import os
@@ -21,31 +15,37 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
+from rsiguard.backends import MLXBackend, mx_seed
 
 CONDS = ["nomem", "worked_clean", "worked_ans_bad", "answer_only"]
-BBH_TASK = "multistep_arithmetic_two"  # default; override with --bbh-task
+BBH_TASK = "multistep_arithmetic_two"  # default for --bbh-task
 
 
 def load_data(dataset, n_pool, n_test, seed, bbh_task=BBH_TASK):
+    """Return disjoint (pool candidates, test items) sampled from the test split."""
     from datasets import load_dataset
+
     rng = np.random.default_rng(seed + 909)
     items = []
-    if dataset == "bbh":  # BIG-Bench Hard subtask with integer targets, recurring procedure
+    if dataset == "bbh":  # the subtask must have integer targets
         ds = load_dataset("lukaemon/bbh", bbh_task)["test"]
         idx = rng.choice(len(ds), size=min(n_pool + n_test, len(ds)), replace=False)
         for i in idx:
             ex = ds[int(i)]
             items.append({"problem": ex["input"], "gold": int(str(ex["target"]).strip())})
     elif dataset == "svamp":
-        ds = load_dataset("ChilleD/SVAMP")["test"]  # simple, structured, recurring by Type
+        ds = load_dataset("ChilleD/SVAMP")["test"]
         idx = rng.choice(len(ds), size=min(n_pool + n_test, len(ds)), replace=False)
         for i in idx:
             ex = ds[int(i)]
-            items.append({"problem": ex["Body"] + " " + ex["Question"],
-                          "gold": int(round(float(ex["Answer"])))})
+            items.append(
+                {
+                    "problem": ex["Body"] + " " + ex["Question"],
+                    "gold": int(round(float(ex["Answer"]))),
+                }
+            )
     else:
         ds = load_dataset("openai/gsm8k", "main")["test"]
         idx = rng.choice(len(ds), size=n_pool + n_test, replace=False)
@@ -57,7 +57,7 @@ def load_data(dataset, n_pool, n_test, seed, bbh_task=BBH_TASK):
 
 
 def build_clean_pool(be, pool_items):
-    """Pool of the model's OWN correct worked solutions (matched style)."""
+    """Return the model's own correct zero-shot solutions as exemplars."""
     clean = []
     for it in pool_items:
         ans, _, txt = mem_solve(be, it["problem"], [])
@@ -111,7 +111,7 @@ def main():
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--max-tokens", type=int, default=384)
-    ap.add_argument("--dataset", default="gsm8k", choices=["gsm8k","svamp","bbh"])
+    ap.add_argument("--dataset", default="gsm8k", choices=["gsm8k", "svamp", "bbh"])
     ap.add_argument("--bbh-task", default=BBH_TASK)
     ap.add_argument("--out", default="results/exp22_gsm8k.json")
     args = ap.parse_args()
@@ -126,20 +126,25 @@ def main():
             continue
         for s in range(args.seeds):
             mx_seed(s)
-            pool_items, test = load_data(args.dataset, args.n_pool, args.n_test, s,
-                                         bbh_task=args.bbh_task)
+            pool_items, test = load_data(
+                args.dataset, args.n_pool, args.n_test, s, bbh_task=args.bbh_task
+            )
             pool = build_clean_pool(be, pool_items)
             row = {"model": key, "seed": s, "pool_size": len(pool)}
             for c in CONDS:
                 row[c] = acc(be, pool, test, c, args.k, s)
             records.append(row)
-            print(f"  seed{s} (pool={len(pool)}): " + " ".join(f"{c}={row[c]:.2f}" for c in CONDS), flush=True)
+            print(
+                f"  seed{s} (pool={len(pool)}): " + " ".join(f"{c}={row[c]:.2f}" for c in CONDS),
+                flush=True,
+            )
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 72)
-    print(" exp22 — GSM8K (REAL procedural): procedure helps, answer-corruption harmless")
+    print(" exp22: procedural benchmark accuracy by condition")
     print("=" * 72)
     print(f"{'model':<16}" + "".join(f"{c:>15}" for c in CONDS))
     for key in [m.strip() for m in args.models.split(",")]:
@@ -148,7 +153,6 @@ def main():
             continue
         print(f"{key:<16}" + "".join(f"{np.mean([r[c] for r in rs]):>15.2f}" for c in CONDS))
     print("=" * 72)
-    print("dichotomy confirmed on REAL data if worked_clean ≈ worked_ans_bad > answer_only ≈ nomem")
     print(f"saved -> {args.out}")
 
 

@@ -1,68 +1,70 @@
-"""exp21 — MIXED task: defeats the "tautology" objection with a compositional prediction.
+"""Composite task that needs a stored fact (unit price) and a procedure (quantity * price).
 
-A task that needs BOTH a non-recomputable FACT (a product's unit price, stored only
-in memory) AND a PROCEDURE (compute total = qty*price*(1+tax)). The test query gives
-the entity and a NEW quantity but NOT the price — the price must be retrieved.
-
-If the dichotomy were a mere tautology ("answer matters iff non-recomputable"), it
-could not predict a decomposition. It predicts a NON-obvious one:
-  - corrupt the FACT (price in memory)      -> HURTS (price is non-recomputable)
-  - corrupt the METHOD (computation shown)   -> HURTS (model follows the method)
-  - corrupt only the ANSWER (final total)    -> HARMLESS (recomputed from fact+method)
-
-Usage:
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp21_mixed.py \
-      --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b --n 24 --k 3 --seeds 3
+The query names the product and a new quantity but not the price, so the price has to be
+retrieved. Conditions: nomem, worked_clean, fact_corrupt (wrong price), method_corrupt
+(addition instead of multiplication) and answer_corrupt (wrong answer field only).
 """
+
 import argparse
 import json
 import os
-import re
 import sys
 
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
+from rsiguard.backends import MLXBackend
 
 CONDS = ["nomem", "worked_clean", "fact_corrupt", "method_corrupt", "answer_corrupt"]
 TAX = 10
 
 
 def make(n, seed):
-    # Composite task: needs a non-recomputable FACT (unit price, only in memory) AND a
-    # PROCEDURE (total = qty * price). Simple multiplication -> headroom once the price is
-    # available; the test omits the price so it must be retrieved. Method-corruption uses a
-    # coherent wrong operation (addition), which models can actually follow.
+    """Return n items: the test question, its gold total and one exemplar text per condition."""
     rng = np.random.default_rng(seed + 555)
     items = []
     for _ in range(n):
         eid = int(rng.integers(1000, 9999))
-        price = int(rng.integers(120, 900))        # the FACT (only in memory)
-        q0 = int(rng.integers(3, 9))               # exemplar quantity
-        q1 = int(rng.integers(3, 9))               # test quantity
+        price = int(rng.integers(120, 900))  # stated only in the exemplar, never in the question
+        q0 = int(rng.integers(3, 9))  # exemplar quantity
+        q1 = int(rng.integers(3, 9))  # test quantity
         while q1 == q0:
             q1 = int(rng.integers(3, 9))
         ex_total = q0 * price
         gold = q1 * price
-        question = (f"Product #{eid}: a customer orders {q1} units. What is the total "
-                    f"cost in JPY (integer)?")
-        clean = (f"Product #{eid}: unit price is JPY {price}. For {q0} units: "
-                 f"total = {q0} * {price} = {ex_total}.\nANSWER: {ex_total}")
+        question = (
+            f"Product #{eid}: a customer orders {q1} units. What is the total "
+            f"cost in JPY (integer)?"
+        )
+        clean = (
+            f"Product #{eid}: unit price is JPY {price}. For {q0} units: "
+            f"total = {q0} * {price} = {ex_total}.\nANSWER: {ex_total}"
+        )
         wprice = price + int(rng.choice([-40, -25, 25, 40, 60]))
-        fact_bad = (f"Product #{eid}: unit price is JPY {wprice}. For {q0} units: "
-                    f"total = {q0} * {wprice} = {q0 * wprice}.\nANSWER: {q0 * wprice}")
-        # WRONG METHOD: addition instead of multiplication (a coherent wrong operation)
-        method_bad = (f"Product #{eid}: unit price is JPY {price}. For {q0} units: "
-                      f"total = {q0} + {price} = {q0 + price}.\nANSWER: {q0 + price}")
+        fact_bad = (
+            f"Product #{eid}: unit price is JPY {wprice}. For {q0} units: "
+            f"total = {q0} * {wprice} = {q0 * wprice}.\nANSWER: {q0 * wprice}"
+        )
+        method_bad = (
+            f"Product #{eid}: unit price is JPY {price}. For {q0} units: "
+            f"total = {q0} + {price} = {q0 + price}.\nANSWER: {q0 + price}"
+        )
         bad = ex_total + int(rng.choice([-30, -20, 20, 30]))
         ans_bad = clean.replace(f"ANSWER: {ex_total}", f"ANSWER: {bad}")
-        items.append({"eid": eid, "gold": gold, "question": question,
-                      "worked_clean": clean, "fact_corrupt": fact_bad,
-                      "method_corrupt": method_bad, "answer_corrupt": ans_bad})
+        items.append(
+            {
+                "eid": eid,
+                "gold": gold,
+                "question": question,
+                "worked_clean": clean,
+                "fact_corrupt": fact_bad,
+                "method_corrupt": method_bad,
+                "answer_corrupt": ans_bad,
+            }
+        )
     return items
 
 
@@ -113,9 +115,10 @@ def main():
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 78)
-    print(" exp21 — MIXED (fact + procedure): what part of memory matters?")
+    print(" exp21: fact-plus-procedure task, accuracy by condition")
     print("=" * 78)
     print(f"{'model':<16}" + "".join(f"{c:>15}" for c in CONDS))
     for key in [m.strip() for m in args.models.split(",")]:
@@ -124,7 +127,6 @@ def main():
             continue
         print(f"{key:<16}" + "".join(f"{np.mean([r[c] for r in rs]):>15.2f}" for c in CONDS))
     print("=" * 78)
-    print("NON-tautological if fact_corrupt & method_corrupt HURT but answer_corrupt is HARMLESS")
     print(f"saved -> {args.out}")
 
 

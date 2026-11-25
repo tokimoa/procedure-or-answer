@@ -1,4 +1,9 @@
-"""Create a deterministic author-review sheet for the filtered-pool audit."""
+"""Build a manual review sheet from the diagnosed exemplars.
+
+The sheet contains every flagged exemplar plus a seeded random sample of unflagged exemplars
+per (model, task).
+"""
+
 import argparse
 import json
 from collections import defaultdict
@@ -26,10 +31,7 @@ def main():
 
     rng = np.random.default_rng(args.seed)
     for key in sorted(strata):
-        clean = [
-            x for x in strata[key]
-            if not x["diagnostic"]["requires_author_review"]
-        ]
+        clean = [x for x in strata[key] if not x["diagnostic"]["requires_author_review"]]
         n = min(args.clean_per_stratum, len(clean))
         for index in rng.choice(len(clean), size=n, replace=False):
             selected.append(clean[int(index)])
@@ -44,29 +46,32 @@ def main():
         if audit_id in seen:
             continue
         seen.add(audit_id)
-        rows.append({
-            "audit_id": audit_id,
-            "model": exemplar["model"],
-            "task": exemplar["task"],
-            "seed": exemplar["seed"],
-            "exemplar_index": exemplar["exemplar_index"],
-            "sample_source": (
-                "diagnostic" if exemplar["diagnostic"]["requires_author_review"]
-                else "random_clean"
-            ),
-            "diagnostic_reasons": exemplar["diagnostic"]["reasons"],
-            "problem": exemplar["problem"],
-            "gold": exemplar["gold"],
-            "expected_trace": exemplar["expected_trace"],
-            "solution": exemplar["solution"],
-            "label": None,
-            "error_type": None,
-            "notes": "",
-        })
+        rows.append(
+            {
+                "audit_id": audit_id,
+                "model": exemplar["model"],
+                "task": exemplar["task"],
+                "seed": exemplar["seed"],
+                "exemplar_index": exemplar["exemplar_index"],
+                "sample_source": (
+                    "diagnostic"
+                    if exemplar["diagnostic"]["requires_author_review"]
+                    else "random_clean"
+                ),
+                "diagnostic_reasons": exemplar["diagnostic"]["reasons"],
+                "problem": exemplar["problem"],
+                "gold": exemplar["gold"],
+                "expected_trace": exemplar["expected_trace"],
+                "solution": exemplar["solution"],
+                "label": None,
+                "error_type": None,
+                "notes": "",
+            }
+        )
 
-    rows.sort(key=lambda x: (
-        x["model"], x["task"], x["sample_source"], x["seed"], x["exemplar_index"]
-    ))
+    rows.sort(
+        key=lambda x: (x["model"], x["task"], x["sample_source"], x["seed"], x["exemplar_index"])
+    )
     out = Path(args.out)
     out.write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
     print(

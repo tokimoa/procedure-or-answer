@@ -1,32 +1,10 @@
-"""exp24 — does UNFILTERED self-generated memory still help? (natural pollution)
+"""Filtered versus unfiltered self-generated exemplar pools on synthetic procedural tasks.
 
-The paper's procedural pools are built from the model's own CORRECT solutions
-(a correctness filter = experimental control). Deployment stores everything the
-model produced. If wrong stored answers are not copied (exp13/exp23), an
-unfiltered pool should match the filtered one on procedural tasks — UNLESS the
-model's natural errors demonstrate wrong METHODS (exp18: wrong methods can be
-destructive for deferential models). This measures it directly:
-
-  nomem             : no retrieval
-  worked_filtered   : pool = the model's own correct solutions (exp13 protocol)
-  worked_unfiltered : pool = the model's first `pool` solutions, correct or NOT
-                      (deployment's "store everything"; purity = zero-shot acc)
-
-Prediction (recomputation mechanism): unfiltered ~= filtered >> nomem, because
-natural wrong answers are recomputed away and natural errors are execution slips
-rather than coherent wrong methods. If instead unfiltered << filtered for the
-deferential models, natural errors DO carry method corruption — either outcome
-turns the paper's "no echo chamber" discussion claim into a measured result.
-
-Wrong exemplars kept in the unfiltered pool are saved per row (problem + sol)
-so their nature (method error vs slip) can be inspected afterwards.
-
-Usage (paper protocol = exp13_ci_v2 flags):
-  HF_HUB_OFFLINE=1 .venv/bin/python experiments/exp24_unfiltered.py \
-      --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b \
-      --tasks arith_hard,invoice --pool 24 --test 24 --k 3 --seeds 5 \
-      --max-tokens 384 --out results/exp24_unfiltered.json
+Conditions: nomem, worked_filtered (the model's own correct solutions) and
+worked_unfiltered (its first --pool solutions, correct or not). Each record also stores
+the unfiltered pool's purity and its wrong exemplars, which exp24b_wrongonly.py reads.
 """
+
 import argparse
 import json
 import os
@@ -36,31 +14,34 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend, mx_seed
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
 from experiments.pools import POOLS, acc_with
+from rsiguard.backends import MLXBackend, mx_seed
 
 CONDS = ["nomem", "worked_filtered", "worked_unfiltered"]
 
 
 def build_pools(be, pool_fn, target, seed):
-    """One candidate pass -> both pools. Candidates are the same problems (and the
-    same rng stream, seed+333) as pools.build_clean_pool, so worked_filtered is the
-    paper's clean-pool protocol; worked_unfiltered keeps the FIRST `target` attempts
-    verbatim, correct or not."""
+    """Return (unfiltered, filtered, attempts, corrects) from one zero-shot pass.
+
+    Candidates are the same problems, from the same rng stream, as in
+    pools.build_clean_pool, so the filtered pool matches that function's output. The
+    unfiltered pool keeps the first `target` attempts verbatim.
+    """
     rng = np.random.default_rng(seed + 333)
     raw = pool_fn(target * 3, rng)
     unfiltered, filtered = [], []
     attempts = corrects = 0
     for it in raw:
         ans, _, txt = mem_solve(be, it["problem"], [])
-        ok = (ans == it["gold"])
+        ok = ans == it["gold"]
         attempts += 1
         corrects += int(ok)
         if len(unfiltered) < target:
-            unfiltered.append({"problem": it["problem"], "gold": it["gold"],
-                               "sol": txt, "correct": bool(ok)})
+            unfiltered.append(
+                {"problem": it["problem"], "gold": it["gold"], "sol": txt, "correct": bool(ok)}
+            )
         if ok and len(filtered) < target:
             filtered.append({"problem": it["problem"], "gold": it["gold"], "sol": txt})
         if len(unfiltered) >= target and len(filtered) >= target:
@@ -96,30 +77,46 @@ def main():
                 test = pf(args.test, np.random.default_rng(s + 7777))
                 unf, fil, attempts, corrects = build_pools(be, pf, args.pool, s)
                 purity = float(np.mean([e["correct"] for e in unf])) if unf else 0.0
-                r = lambda: np.random.default_rng(s + 1)
-                row = {"model": key, "task": task, "seed": s,
-                       "nomem": acc_with(be, None, test, 0, r()),
-                       "worked_filtered": acc_with(be, fil, test, args.k, r()),
-                       "worked_unfiltered": acc_with(be, unf, test, args.k, r()),
-                       "pool_filtered": len(fil), "pool_unfiltered": len(unf),
-                       "purity_unfiltered": purity,
-                       "gen_attempts": attempts, "gen_corrects": corrects,
-                       "wrong_exemplars": [{"problem": e["problem"], "gold": e["gold"],
-                                            "sol": e["sol"]}
-                                           for e in unf if not e["correct"]]}
+
+                # Same exemplar draws for every condition.
+                def fresh_rng(seed=s):
+                    return np.random.default_rng(seed + 1)
+
+                row = {
+                    "model": key,
+                    "task": task,
+                    "seed": s,
+                    "nomem": acc_with(be, None, test, 0, fresh_rng()),
+                    "worked_filtered": acc_with(be, fil, test, args.k, fresh_rng()),
+                    "worked_unfiltered": acc_with(be, unf, test, args.k, fresh_rng()),
+                    "pool_filtered": len(fil),
+                    "pool_unfiltered": len(unf),
+                    "purity_unfiltered": purity,
+                    "gen_attempts": attempts,
+                    "gen_corrects": corrects,
+                    "wrong_exemplars": [
+                        {"problem": e["problem"], "gold": e["gold"], "sol": e["sol"]}
+                        for e in unf
+                        if not e["correct"]
+                    ],
+                }
                 records.append(row)
-                print(f"  {task:<11} seed{s}: " +
-                      " ".join(f"{c}={row[c]:.2f}" for c in CONDS) +
-                      f"  purity={purity:.2f} pools=({len(fil)},{len(unf)})", flush=True)
+                print(
+                    f"  {task:<11} seed{s}: "
+                    + " ".join(f"{c}={row[c]:.2f}" for c in CONDS)
+                    + f"  purity={purity:.2f} pools=({len(fil)},{len(unf)})",
+                    flush=True,
+                )
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
 
-    # ---- paired stats (same conventions as analyze_paper_stats.py) ----
     from scipy import stats as st
 
     def paired(rows, a, b):
+        """Return (n, mean of a - b, 95% CI half-width, paired t-test p-value)."""
         d = np.array([r[a] - r[b] for r in rows], float)
         if len(d) < 2:
             return len(d), float(d.mean()) if len(d) else 0.0, 0.0, 1.0
@@ -128,7 +125,7 @@ def main():
         return len(d), float(d.mean()), float(ci), float(p)
 
     print("\n" + "=" * 74)
-    print(" exp24 — unfiltered vs filtered self-generated memory (paired)")
+    print(" exp24: unfiltered vs filtered self-generated memory (paired)")
     print("=" * 74)
     print(f"{'model/task':<26}" + "".join(f"{c:>18}" for c in CONDS) + f"{'purity':>9}")
     for task in tasks:
@@ -136,12 +133,15 @@ def main():
             rs = [r for r in records if r["model"] == key and r["task"] == task]
             if not rs:
                 continue
-            line = f"{key+'/'+task:<26}" + "".join(
-                f"{np.mean([r[c] for r in rs]):>18.2f}" for c in CONDS)
+            line = f"{key + '/' + task:<26}" + "".join(
+                f"{np.mean([r[c] for r in rs]):>18.2f}" for c in CONDS
+            )
             print(line + f"{np.mean([r['purity_unfiltered'] for r in rs]):>9.2f}")
-    for a, b, label in [("worked_filtered", "worked_unfiltered", "filtered - unfiltered"),
-                        ("worked_unfiltered", "nomem", "unfiltered - nomem"),
-                        ("worked_filtered", "nomem", "filtered  - nomem")]:
+    for a, b, label in [
+        ("worked_filtered", "worked_unfiltered", "filtered - unfiltered"),
+        ("worked_unfiltered", "nomem", "unfiltered - nomem"),
+        ("worked_filtered", "nomem", "filtered  - nomem"),
+    ]:
         n, m, ci, p = paired(records, a, b)
         print(f"POOLED {label:<24} {m:+.3f} +/- {ci:.3f} (95% CI, n={n})  p={p:.4g}")
     print("per-model (filtered - unfiltered):")
@@ -152,7 +152,6 @@ def main():
         n, m, ci, p = paired(rs, "worked_filtered", "worked_unfiltered")
         print(f"  {key:<16} {m:+.3f} +/- {ci:.3f} (n={n})  p={p:.4g}")
     print("=" * 74)
-    print("no-echo-chamber holds if unfiltered ~= filtered >> nomem")
     print(f"saved -> {args.out}")
 
 

@@ -1,11 +1,10 @@
-"""Deterministic diagnostics for the retained-exemplar audit population.
+"""Rule-based diagnostics for the exemplars archived by exp31_filtered_pool_audit.py.
 
-This is deliberately conservative: it identifies records requiring author
-inspection but never turns an automatic flag into a scientific annotation.
-It checks explicit numeric equations, missing procedural structure, and a
-specific compensating-error pattern in which the text says to round to nearest
-but outputs the protocol's floor value.
+Flags exemplars for manual review; a flag is not a final label. Checks: stated numeric
+equations that do not hold, missing expected operations, and rounding wording (nearest or
+unspecified) where the task floors a non-integer quantity.
 """
+
 import argparse
 import ast
 import json
@@ -13,7 +12,6 @@ import math
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
-
 
 _EQ = re.compile(
     r"(?<![\d.])"
@@ -23,6 +21,7 @@ _EQ = re.compile(
 
 
 def normalize_math(text):
+    """Rewrite math symbols as ASCII operators and remove thousands separators."""
     out = text.replace("\\times", "*").replace("\\div", "/")
     out = out.replace("×", "*").replace("÷", "/").replace("−", "-")
     out = re.sub(r"(?<=\d),(?=\d{3}(?:\D|$))", "", out)
@@ -32,6 +31,7 @@ def normalize_math(text):
 
 
 def safe_eval(expr):
+    """Evaluate an expression made only of numbers and arithmetic operators."""
     tree = ast.parse(expr, mode="eval")
     allowed = (
         ast.Expression,
@@ -51,6 +51,7 @@ def safe_eval(expr):
 
 
 def equation_issues(text):
+    """Equations in the text whose stated result differs from the computed value."""
     issues = []
     for match in _EQ.finditer(normalize_math(text)):
         expr, stated = match.groups()
@@ -59,18 +60,20 @@ def equation_issues(text):
             given = float(stated)
         except (SyntaxError, ValueError, ZeroDivisionError):
             continue
-        # Decimal working is commonly shown to two places (e.g. 143/6=23.83).
+        # Decimal working is usually shown to two places (e.g. 143/6=23.83).
         acceptable = math.isclose(actual, given, rel_tol=0, abs_tol=0.011)
-        # Procedural tasks frequently state integer quotients directly.  Accept
-        # an explicit floor result when division is present.
+        # Solutions often state an integer quotient directly, so accept the floored
+        # result when the expression contains a division.
         if "/" in expr and math.isclose(math.floor(actual), given, abs_tol=1e-6):
             acceptable = True
         if not acceptable:
-            issues.append({
-                "equation": match.group(0),
-                "computed": actual,
-                "stated": given,
-            })
+            issues.append(
+                {
+                    "equation": match.group(0),
+                    "computed": actual,
+                    "stated": given,
+                }
+            )
     return issues
 
 
@@ -78,32 +81,33 @@ def has_structure(task, text):
     normalized = normalize_math(text).lower()
     has_mul = "*" in normalized or "multiply" in normalized
     if task == "arith_hard":
-        return has_mul and (
-            "/" in normalized or "divid" in normalized or "crate" in normalized
-        ) and (
-            "damag" in normalized or "%" in normalized
+        return (
+            has_mul
+            and ("/" in normalized or "divid" in normalized or "crate" in normalized)
+            and ("damag" in normalized or "%" in normalized)
         )
-    return has_mul and ("+" in normalized or "subtotal" in normalized) and (
-        "%" in normalized
-        or "tax" in normalized
-        or ("110" in normalized and "100" in normalized)
+    return (
+        has_mul
+        and ("+" in normalized or "subtotal" in normalized)
+        and (
+            "%" in normalized
+            or "tax" in normalized
+            or ("110" in normalized and "100" in normalized)
+        )
     )
 
 
 def rounding_conflict(exemplar):
-    """Detect nearest-vs-floor wording that can hide a compensating error."""
+    """True if the solution mentions rounding without saying down or floor, and the
+    quantity the task floors is not an integer.
+    """
     text = exemplar["solution"].lower()
     contexts = []
-    # Inspect every use of ``round`` as well as ``nearest``.  The earlier,
-    # narrower expression only caught phrases such as "rounding off" and
-    # missed ordinary wording like "round 4.5 to 5".
+    # Match any use of "round" as well as "nearest", e.g. "round 4.5 to 5".
     for match in re.finditer(r"nearest|round", text):
         contexts.append(text[max(0, match.start() - 80) : match.end() + 80])
-    # "round down to the nearest whole number" states the intended floor rule,
-    # despite containing the word nearest.
-    suspect_contexts = [
-        c for c in contexts if "down" not in c and "floor" not in c
-    ]
+    # "round down to the nearest whole number" states the floor rule.
+    suspect_contexts = [c for c in contexts if "down" not in c and "floor" not in c]
     if not suspect_contexts:
         return False
     trace = exemplar["expected_trace"]
@@ -113,12 +117,11 @@ def rounding_conflict(exemplar):
         total = trace["total"]
         damage_pct = trace["inputs"][3]
         exact_damage = total * damage_pct / 100
-        # The protocol floors damaged items before subtracting them.
+        # The task floors the damaged-item count before subtracting it.
         exact = exact_damage
     frac = exact - math.floor(exact)
-    # Any non-integral quantity handled with an unspecified/nearest rounding
-    # rule is non-transferable under the benchmark's explicit floor protocol,
-    # even when it happens to agree with floor for this particular item.
+    # Nearest or unspecified rounding of a non-integer quantity conflicts with the
+    # task's floor rule even when both give the same result for this item.
     return frac > 1e-9
 
 

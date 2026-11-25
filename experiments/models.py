@@ -1,5 +1,4 @@
-"""Model registry: the ten 4-bit MLX models used in the paper (four families, 1B-30B).
-The four main models are llama3.2-3b, phi4-mini, ministral3-3b and granite4.1-8b."""
+"""Short names for the 4-bit MLX models used by the experiments (four families, 1B to 30B)."""
 
 MODELS = {
     "llama3.2-1b": "mlx-community/Llama-3.2-1B-Instruct-4bit",

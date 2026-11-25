@@ -1,4 +1,5 @@
-"""Apply the predeclared audit rubric and summarize the full exp31 population."""
+"""Assign final audit labels to the diagnosed exemplars and summarize them per model and task."""
+
 import argparse
 import json
 import os
@@ -14,6 +15,7 @@ from experiments.exp32_screened_pool_sensitivity import (
 
 
 def classify(x):
+    """Labels derived from the diagnostics; ['no_issue_identified'] if none apply."""
     d = x["diagnostic"]
     key = (x["model"], x["task"], x["seed"], x["exemplar_index"])
     labels = []
@@ -27,9 +29,7 @@ def classify(x):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
-    ap.add_argument(
-        "--out", default="results/exp31_filtered_audit_final.json"
-    )
+    ap.add_argument("--out", default="results/exp31_filtered_audit_final.json")
     args = ap.parse_args()
     data = json.loads(Path(args.path).read_text(encoding="utf-8"))
     counts = defaultdict(Counter)
@@ -45,9 +45,7 @@ def main():
         total.update(value)
     data["audit_summary"] = summary
     data["audit_total"] = dict(total)
-    Path(args.out).write_text(
-        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    Path(args.out).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     for key, value in summary.items():
         print(key, value)
     print("TOTAL", dict(total))

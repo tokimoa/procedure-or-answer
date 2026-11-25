@@ -1,16 +1,13 @@
-"""Full fixed-set BBH evaluation with leave-one-out memory.
+"""BBH on the full fixed test set with leave-one-out memory.
 
-For each model, all 250 multistep_arithmetic_two items are first solved with no
-memory. Correct model generations form that model's exemplar pool.  When item i
-is evaluated with memory, its own record is excluded before cosine top-k
-retrieval.  This preserves the paper's model-own, answer-filtered protocol while
-evaluating the complete fixed benchmark without train/test leakage.
-
-Conditions: NO-MEM / WORKED / ANSWER-CORRUPT.  Item-level predictions and pool
-generations are checkpointed, so interrupted runs resume without regeneration.
-Models are loaded sequentially.
+Each model first solves every item with no memory; its correct generations form the pool.
+With memory, an item's own record is excluded before cosine top-k retrieval.
+Conditions: nomem, worked_clean, worked_ans_bad. Pool generations and predictions are
+checkpointed per item, so an interrupted run resumes without regenerating them.
 """
+
 import argparse
+import contextlib
 import gc
 import json
 import os
@@ -22,10 +19,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiments.models import MODELS
 from experiments.memory import solve as mem_solve
+from experiments.models import MODELS
 from rsiguard.backends import MLXBackend, mx_seed
-
 
 CONDS = ["nomem", "worked_clean", "worked_ans_bad"]
 
@@ -45,6 +41,7 @@ def load_bbh(task):
 
 
 def corrupt_solution(solution, gold, source_index):
+    """Replace the answer field with gold plus a nonzero offset chosen by source_index."""
     offsets = (-3, -2, -1, 1, 2, 3)
     wrong = gold + offsets[source_index % len(offsets)]
     out, count = re.subn(r"ANSWER:\s*-?\d+", f"ANSWER: {wrong}", solution)
@@ -70,10 +67,9 @@ def save_checkpoint(path, data):
 
 
 def retrieve(be, problem, pool, embeddings, k, excluded_item_id):
+    """Indices of up to k pool exemplars most similar to the problem, excluding its own."""
     qe = be.embed([problem])[0]
-    sims = embeddings @ qe / (
-        np.linalg.norm(embeddings, axis=1) * np.linalg.norm(qe) + 1e-9
-    )
+    sims = embeddings @ qe / (np.linalg.norm(embeddings, axis=1) * np.linalg.norm(qe) + 1e-9)
     for j, exemplar in enumerate(pool):
         if exemplar["item_id"] == excluded_item_id:
             sims[j] = -np.inf
@@ -83,7 +79,7 @@ def retrieve(be, problem, pool, embeddings, k, excluded_item_id):
 
 def summarize(records, model_keys):
     print("\n" + "=" * 78)
-    print(" exp30 — BBH full fixed-set leave-one-out evaluation")
+    print(" exp30: BBH full fixed-set leave-one-out evaluation")
     print("=" * 78)
     for model in model_keys:
         print(f"-- {model} --")
@@ -91,8 +87,7 @@ def summarize(records, model_keys):
             rows = [r for r in records if r["model"] == model and r["condition"] == cond]
             if rows:
                 print(
-                    f"  {cond:<16} n={len(rows):>3} "
-                    f"acc={np.mean([r['correct'] for r in rows]):.3f}"
+                    f"  {cond:<16} n={len(rows):>3} acc={np.mean([r['correct'] for r in rows]):.3f}"
                 )
     print("=" * 78)
 
@@ -131,10 +126,7 @@ def main():
     if data["meta"] and data["meta"] != expected_meta:
         raise ValueError("Checkpoint metadata does not match the requested experiment")
     data["meta"] = expected_meta
-    done = {
-        (r["model"], r["condition"], r["item_id"])
-        for r in data["records"]
-    }
+    done = {(r["model"], r["condition"], r["item_id"]) for r in data["records"]}
     print(f"fixed BBH set: task={args.task} n={len(items)} k={args.k}", flush=True)
 
     for model_key in model_keys:
@@ -159,21 +151,23 @@ def main():
             generated.add(item["item_id"])
             record_key = (model_key, "nomem", item["item_id"])
             if record_key not in done:
-                data["records"].append({
-                    "model": model_key,
-                    "condition": "nomem",
-                    "item_id": item["item_id"],
-                    "gold": item["gold"],
-                    "pred": pred,
-                    "correct": int(pred == item["gold"]),
-                    "retrieved_ids": [],
-                })
+                data["records"].append(
+                    {
+                        "model": model_key,
+                        "condition": "nomem",
+                        "item_id": item["item_id"],
+                        "gold": item["gold"],
+                        "pred": pred,
+                        "correct": int(pred == item["gold"]),
+                        "retrieved_ids": [],
+                    }
+                )
                 done.add(record_key)
             save_checkpoint(out_path, data)
             if (item_index + 1) % 10 == 0 or item_index + 1 == len(items):
                 print(f"    pool {item_index + 1}/{len(items)} checkpointed", flush=True)
 
-        # Restore canonical item order after a resumed run.
+        # Restore dataset order after a resumed run.
         by_id = {r["item_id"]: r for r in model_pool_rows}
         model_pool_rows[:] = [by_id[x["item_id"]] for x in items]
         clean_pool = [r for r in model_pool_rows if r["correct"]]
@@ -203,30 +197,28 @@ def main():
                 record_key = (model_key, cond, item["item_id"])
                 if record_key in done:
                     continue
-                idx = retrieve(
-                    be, item["problem"], clean_pool, embeddings, args.k, item["item_id"]
-                )
+                idx = retrieve(be, item["problem"], clean_pool, embeddings, args.k, item["item_id"])
                 exemplars = [memory[j] for j in idx]
                 mx_seed(args.seed * 100000 + item_index)
                 pred, _, _ = mem_solve(be, item["problem"], exemplars)
-                data["records"].append({
-                    "model": model_key,
-                    "condition": cond,
-                    "item_id": item["item_id"],
-                    "gold": item["gold"],
-                    "pred": pred,
-                    "correct": int(pred == item["gold"]),
-                    "retrieved_ids": [x["item_id"] for x in exemplars],
-                })
+                data["records"].append(
+                    {
+                        "model": model_key,
+                        "condition": cond,
+                        "item_id": item["item_id"],
+                        "gold": item["gold"],
+                        "pred": pred,
+                        "correct": int(pred == item["gold"]),
+                        "retrieved_ids": [x["item_id"] for x in exemplars],
+                    }
+                )
                 done.add(record_key)
                 save_checkpoint(out_path, data)
                 if (item_index + 1) % 10 == 0 or item_index + 1 == len(items):
                     print(f"    {item_index + 1}/{len(items)} checkpointed", flush=True)
 
-        try:
+        with contextlib.suppress(Exception):
             be.mx.clear_cache()
-        except Exception:
-            pass
         del be
         gc.collect()
         summarize(data["records"], [model_key])

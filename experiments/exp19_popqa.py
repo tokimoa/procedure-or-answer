@@ -1,15 +1,10 @@
-"""exp19 — REAL knowledge benchmark (PopQA): the dichotomy's knowledge side on real data.
+"""Compare exemplar formats on PopQA (Mallen et al., 2023), using long-tail entities.
 
-PopQA (Mallen et al. 2023): entity-centric factual QA; long-tail entities are NOT
-recallable by the model parametrically -> the fact must come from memory. This is the
-real-data analog of our synthetic KB. Prediction (knowledge side): nomem low (long
-tail), worked_clean ≈ answer_only high, and **fact_corrupt (wrong fact in memory)
-collapses accuracy** — the answer is decisive.
-
-Usage:
-  HF_HUB_OFFLINE=0 .venv/bin/python experiments/exp19_popqa.py \
-      --models llama3.2-3b,phi4-mini,ministral3-3b,granite4.1-8b --n 24 --k 3 --seeds 3
+Memory holds one record per test question, retrieved top-k by embedding similarity.
+Conditions: nomem, answer_only, worked_clean and fact_corrupt (each record states the
+answer to a randomly drawn question from the same set).
 """
+
 import argparse
 import json
 import os
@@ -20,8 +15,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rsiguard.backends import MLXBackend
 from experiments.models import MODELS
+from rsiguard.backends import MLXBackend
 
 CONDS = ["nomem", "answer_only", "worked_clean", "fact_corrupt"]
 _ANS = re.compile(r"ANSWER:\s*(.+)", re.IGNORECASE)
@@ -33,8 +28,9 @@ def norm(s):
 
 def load_popqa(n, seed):
     from datasets import load_dataset
+
     d = load_dataset("akariasai/PopQA")["test"]
-    # long-tail (least popular subjects) -> non-recomputable regime
+    # Sample from the 3000 least popular subjects.
     order = np.argsort([float(d[i]["s_pop"] or 0) for i in range(len(d))])
     pool = order[:3000]
     rng = np.random.default_rng(seed + 2222)
@@ -44,14 +40,20 @@ def load_popqa(n, seed):
         ex = d[int(i)]
         try:
             aliases = json.loads(ex["o_aliases"]) if ex["o_aliases"] else []
-        except Exception:
+        except Exception:  # unparseable alias list: score against the object alone
             aliases = []
-        items.append({"q": ex["question"], "obj": ex["obj"],
-                      "golds": [norm(x) for x in [ex["obj"], *aliases] if x]})
+        items.append(
+            {
+                "q": ex["question"],
+                "obj": ex["obj"],
+                "golds": [norm(x) for x in [ex["obj"], *aliases] if x],
+            }
+        )
     return items
 
 
 def solve(be, q, exemplars):
+    """Return the normalised answer: the text after ANSWER:, else the last output line."""
     shots = "".join(f"Q: {e['q']}\n{e['sol']}\n\n" for e in exemplars)
     u = shots + f"Answer the question. End with EXACTLY: ANSWER: <answer>\nQ: {q}"
     txt = be.gen(u)
@@ -60,6 +62,7 @@ def solve(be, q, exemplars):
 
 
 def correct(pred, golds):
+    """1.0 if the prediction equals, contains or is contained in any gold alias."""
     return 1.0 if any(g and (g == pred or g in pred or pred in g) for g in golds) else 0.0
 
 
@@ -69,7 +72,7 @@ def mem_items(kb, cond, rng):
         if cond == "answer_only":
             sol = f"ANSWER: {it['obj']}"
         elif cond == "fact_corrupt":
-            wrong = kb[int(rng.integers(len(kb)))]["obj"]  # a different real fact
+            wrong = kb[int(rng.integers(len(kb)))]["obj"]  # may draw the item itself
             sol = f"The answer is {wrong}.\nANSWER: {wrong}"
         else:  # worked_clean
             sol = f"The answer is {it['obj']}.\nANSWER: {it['obj']}"
@@ -121,9 +124,10 @@ def main():
         del be
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    json.dump(records, open(args.out, "w"), indent=2)
+    with open(args.out, "w") as fp:
+        json.dump(records, fp, indent=2)
     print("\n" + "=" * 70)
-    print(" exp19 — PopQA (REAL knowledge): the answer/fact is decisive")
+    print(" exp19: PopQA accuracy by condition")
     print("=" * 70)
     print(f"{'model':<16}" + "".join(f"{c:>14}" for c in CONDS))
     for key in [m.strip() for m in args.models.split(",")]:
@@ -132,7 +136,6 @@ def main():
             continue
         print(f"{key:<16}" + "".join(f"{np.mean([r[c] for r in rs]):>14.2f}" for c in CONDS))
     print("=" * 70)
-    print("knowledge side confirmed on REAL data if fact_corrupt << worked ≈ answer_only")
     print(f"saved -> {args.out}")
 
 
