@@ -63,7 +63,11 @@ def mixedlm_check(rows, fn, label):
         import pandas as pd
         import statsmodels.formula.api as smf
         df = pd.DataFrame({"d": [fn(r) for r in rows], "model": [r["model"] for r in rows]})
-        res = smf.mixedlm("d ~ 1", df, groups=df["model"]).fit(reml=True)
+        # the default BFGS start does not converge on the headline contrast
+        res = smf.mixedlm("d ~ 1", df, groups=df["model"]).fit(
+            reml=True, method=["lbfgs", "powell", "nm"])
+        if not res.converged:
+            raise RuntimeError("mixed model did not converge")
         b, se = res.params["Intercept"], res.bse["Intercept"]
         z = b / se
         p = 2 * stats.norm.sf(abs(z))
