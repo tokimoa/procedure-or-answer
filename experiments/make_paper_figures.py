@@ -75,7 +75,7 @@ def fig_dichotomy():
     dk = {m: permodel(know, m, lambda r: r["worked_clean"] - r["worked_ans_bad"]) for m in MODELS4}
     fig, ax = plt.subplots(figsize=(5.2, 3.2))
     grouped_drops(ax, dp, dk, "procedural (synthetic)", "knowledge (synthetic)",
-                  "drop from answer corruption")
+                  "drop from answer/fact corruption")
     fig.savefig(f"{OUT}/fig_dichotomy_synthetic.png")
     plt.close(fig)
 

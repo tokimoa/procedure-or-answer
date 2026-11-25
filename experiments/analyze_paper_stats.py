@@ -313,7 +313,7 @@ for mo in ROSTER:
 paired([r["worked_clean"] - r["worked_ans_bad"] for r in d], "roster answer-corruption drop (pooled)")
 tost([r["worked_clean"] - r["worked_ans_bad"] for r in d], "roster answer-corruption drop")
 
-print("\n=== exp22 GSM8K (Appendix F, Table 8; diverse-task boundary; half-up rounding) ===")
+print("\n=== exp22 GSM8K (GSM8K appendix; diverse-task boundary; half-up rounding) ===")
 d = load("exp22_gsm8k.json")
 for mo in MODELS4:
     rs = [r for r in d if r["model"] == mo]
@@ -360,7 +360,7 @@ for _f, _lbl in [("exp28_proc_only.json", "controlled procedural (arith_hard, in
                     "proc_blank - nomem")
     mixedlm_check(d, lambda r: r["worked_clean"] - r["proc_blank"], "worked - proc_blank")
 
-print("\n=== exp28 POOLED over both regimes (the numbers quoted in Sec 4.1 / App D) ===")
+print("\n=== exp28 POOLED over both regimes (the numbers quoted in Sec 4.1 and the answer-removal appendix) ===")
 try:
     _p28 = (json.load(open(os.path.join(R, "exp28_proc_only.json")))
             + json.load(open(os.path.join(R, "exp28_bbh_proc_only.json"))))
